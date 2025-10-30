@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../../src/api/client';
+import * as Location from 'expo-location';
 
 export default function JobDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -35,6 +36,11 @@ export default function JobDetailsScreen() {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [tempSelectedDates, setTempSelectedDates] = useState<Date[]>([]);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoInfo, setVideoInfo] = useState<{ agora?: string | null }>({});
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [checkinsLoading, setCheckinsLoading] = useState(false);
+  const [checkins, setCheckins] = useState<any[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Check if bid form is valid
@@ -158,6 +164,50 @@ export default function JobDetailsScreen() {
     },
     enabled: !!id,
   });
+
+  // Fetch video conferencing info (Agora only)
+  const fetchVideoInfo = useCallback(async () => {
+    try {
+      setVideoLoading(true);
+      const res = await apiClient.get(`/agora-video/enquiry/${id}`);
+      const agoraLink = res?.data?.data?.participants?.joinee_link || null;
+      setVideoInfo({ agora: agoraLink });
+    } catch (e) {
+      setVideoInfo({ agora: null });
+    } finally {
+      setVideoLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) fetchVideoInfo();
+  }, [id, fetchVideoInfo]);
+
+  const fetchCheckIns = useCallback(async () => {
+    try {
+      setCheckinsLoading(true);
+      // Prefer the single enquiry response which typically includes checkIns
+      const res = await apiClient.post('/get-single-enquiry', { id: Number(id) });
+      const list = res?.data?.checkIns || res?.data?.data?.checkIns || res?.data?.enquiry?.checkIns || [];
+      setCheckins(Array.isArray(list) ? list : []);
+    } catch (e) {
+      setCheckins([]);
+    } finally {
+      setCheckinsLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) fetchCheckIns();
+  }, [id, fetchCheckIns]);
+
+  // Seed from initial jobData if available
+  useEffect(() => {
+    const list = jobData?.checkIns || jobData?.data?.checkIns || jobData?.enquiry?.checkIns;
+    if (Array.isArray(list) && list.length) {
+      setCheckins(list);
+    }
+  }, [jobData]);
 
   // Bid mutation
   const bidMutation = useMutation({
@@ -343,6 +393,57 @@ export default function JobDetailsScreen() {
     }
   };
 
+  const handleCheckIn = async () => {
+    try {
+      if (isCheckingIn) return;
+      setIsCheckingIn(true);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Location permission is needed to check in.');
+        setIsCheckingIn(false);
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      let addressText = '';
+      try {
+        const geo = await Location.reverseGeocodeAsync({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        if (geo && geo.length > 0) {
+          const g = geo[0];
+          addressText = [g.name, g.street, g.city, g.region, g.postalCode, g.country].filter(Boolean).join(', ');
+        }
+      } catch {}
+
+      const payload: any = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        address: addressText,
+        note: 'Inspector check-in',
+      };
+      // Identifiers required by API
+      // enquiry_log_id is the route param id in legacy app
+      payload.enquiry_log_id = Number(id);
+      // Try multiple sources for master_log_id like legacy PWA: enquiry.master_logs[0].id
+      const masterLogId = job?.enquiry?.master_logs?.[0]?.id
+        || jobData?.enquiry?.master_logs?.[0]?.id
+        || job?.master_logs?.[0]?.id
+        || jobData?.master_logs?.[0]?.id
+        || jobData?.my_bid?.master_log_id
+        || jobData?.data?.enquiry?.master_logs?.[0]?.id
+        || jobData?.data?.master_logs?.[0]?.id;
+      if (masterLogId) payload.master_log_id = masterLogId;
+
+      await apiClient.post('/add-enquiry-check-in', payload);
+      Alert.alert('Checked in', 'Your location has been recorded successfully.');
+      fetchCheckIns();
+    } catch (e: any) {
+      Alert.alert('Check-in failed', e?.response?.data?.message || 'Unable to complete check-in.');
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
   const getStatusText = (status: string | number | null | undefined) => {
     console.log('🔍 Status Debug - Raw status:', status, 'Type:', typeof status);
     
@@ -382,7 +483,18 @@ export default function JobDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={styles.headerTitle}>Job Details</Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerRight}>
+          {hasUserBid && (String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
+            <Pressable
+              style={styles.checkInButton}
+              onPress={handleCheckIn}
+              disabled={isCheckingIn}
+            >
+              <Ionicons name="log-in-outline" size={18} color="#065F46" />
+              <Text style={styles.checkInButtonText}>{isCheckingIn ? 'Checking in…' : 'Check-in'}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <ScrollView 
@@ -549,14 +661,39 @@ export default function JobDetailsScreen() {
         </View>
 
         {/* Inspection Dates */}
-        {job?.est_inspection_date && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Estimated Inspection Date</Text>
-            <Text style={styles.dateText}>
-              {formatDate(job.est_inspection_date)}
-            </Text>
-          </View>
-        )}
+        {(() => {
+          const raw = job?.est_inspection_date || job?.inspection_dates || job?.est_dates;
+          if (!raw) return null;
+          let dates: string[] = [];
+          if (Array.isArray(raw)) dates = raw as string[];
+          else if (typeof raw === 'string') {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) dates = parsed;
+              else dates = raw.split(/[,;|]/).map((s) => s.trim()).filter(Boolean);
+            } catch {
+              dates = raw.split(/[,;|]/).map((s) => s.trim()).filter(Boolean);
+            }
+          }
+          const normalize = (s: string) => {
+            const d = new Date(s);
+            if (!isNaN(d.getTime())) return s;
+            const n = s.includes('/') ? s.split('/').reverse().join('-') : s;
+            return n;
+          };
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Estimated Inspection Date</Text>
+              <View style={styles.dateChipWrap}>
+                {(dates.length ? dates : [String(raw)])?.map((d, i) => (
+                  <View key={i} style={styles.dateChip}>
+                    <Text style={styles.dateChipText}>{formatDate(normalize(String(d)))}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Additional Requirements */}
         <View style={styles.section}>
@@ -592,6 +729,135 @@ export default function JobDetailsScreen() {
             )}
           </View>
         </View>
+
+        {/* Input Documents (Download) - only for accepted bids */}
+        {hasUserBid && (String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Input Documents</Text>
+          </View>
+          <View style={styles.documentsContainer}>
+            {(() => {
+              const docs =
+                job?.output_docs || jobData?.output_docs || jobData?.data?.output_docs ||
+                job?.input_documents || job?.input_docs || job?.documents || jobData?.input_documents;
+              let list: any[] = [];
+              if (Array.isArray(docs)) list = docs;
+              else if (typeof docs === 'string') list = docs.split(/[\,\n]/).map((s) => s.trim()).filter(Boolean);
+              else list = [];
+              return list.length > 0 ? (
+                list.map((doc, idx) => {
+                  const url = typeof doc === 'string' ? doc : (doc?.url || doc?.file || '');
+                  const finalUrl = /^https?:\/\//i.test(url) ? url : `https://erpbeta.enspek.com/${String(url || '').replace(/^\//, '')}`;
+                  const uploadedRaw = (doc?.created_at || doc?.createdAt || doc?.date || '');
+                  const uploaded = uploadedRaw ? formatDate(String(uploadedRaw)) : '';
+                  return (
+                    <View key={idx} style={styles.documentRow}>
+                      <View>
+                        <Text style={styles.documentMetaLabel}>Upload Date:</Text>
+                        <Text style={styles.documentMetaValue}>{uploaded || 'N/A'}</Text>
+                      </View>
+                      <Pressable style={styles.downloadButton} onPress={() => Linking.openURL(finalUrl)}>
+                        <Ionicons name="download-outline" size={16} color="#FFFFFF" />
+                        <Text style={styles.downloadButtonText}>Download</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })
+              ) : (
+                <View style={styles.videoEmpty}>
+                  <Ionicons name="document-text-outline" size={36} color="#9CA3AF" />
+                  <Text style={styles.videoEmptyTitle}>No input documents available</Text>
+                </View>
+              );
+            })()}
+          </View>
+        </View>
+        )}
+
+        {/* Video Conferencing */}
+        {hasUserBid && (
+          <View style={styles.section}>
+            <View style={styles.videoHeader}>
+              <Text style={styles.sectionTitle}>Video Conferencing</Text>
+              <Pressable style={styles.refreshButton} onPress={fetchVideoInfo} disabled={videoLoading}>
+                <Text style={styles.refreshText}>Refresh</Text>
+              </Pressable>
+            </View>
+            <View style={{ gap: 12 }}>
+              <Pressable
+                style={styles.videoButton}
+                onPress={async () => {
+                  try {
+                    const join = videoInfo.agora;
+                    if (join) return Linking.openURL(join);
+                    Alert.alert('Video call', 'No join link available yet');
+                  } catch (e: any) {
+                    Alert.alert('Video call', e?.response?.data?.message || 'Failed to load meeting');
+                  }
+                }}
+              >
+                <Ionicons name="videocam-outline" size={18} color="#1D4ED8" />
+                <Text style={styles.videoButtonText}>Open Video Call</Text>
+              </Pressable>
+              {!videoInfo.agora && !videoLoading && (
+                <View style={styles.videoEmpty}>
+                  <Ionicons name="videocam-off-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.videoEmptyTitle}>No active video calls available</Text>
+                  <Text style={styles.videoEmptySubtitle}>Video calls will appear here when scheduled for this inspection</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Check-ins - only for accepted bids */}
+        {(String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
+        <View style={styles.section}>
+          <View style={styles.videoHeader}>
+            <Text style={styles.sectionTitle}>Check-ins</Text>
+            <Pressable style={styles.refreshButton} onPress={fetchCheckIns} disabled={checkinsLoading}>
+              <Text style={styles.refreshText}>Refresh</Text>
+            </Pressable>
+          </View>
+          {checkinsLoading ? (
+            <View style={styles.videoEmpty}><ActivityIndicator /></View>
+          ) : checkins.length === 0 ? (
+            <View style={styles.videoEmpty}>
+              <Ionicons name="location-outline" size={36} color="#9CA3AF" />
+              <Text style={styles.videoEmptyTitle}>No check-ins found</Text>
+            </View>
+          ) : (
+            <View style={styles.checkinsList}>
+              {checkins.map((ci: any, idx: number) => (
+                <View key={idx} style={styles.checkinItem}>
+                  <View style={styles.checkinIconWrap}>
+                    <Ionicons name="pin-outline" size={16} color="#2563EB" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.checkinAddress} numberOfLines={2}>
+                      {ci.address || `${ci.latitude}, ${ci.longitude}`}
+                    </Text>
+                    <Text style={styles.checkinMeta}>
+                      {ci.created_at || ci.time || ''}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+        )}
+
+        {/* Accepted Bid Notice */}
+        {hasUserBid && (String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
+          <View style={[styles.section, { backgroundColor: '#ECFDF5' }] }>
+            <Text style={[styles.sectionTitle, { color: '#065F46' }]}>Bid Accepted</Text>
+            <Text style={{ color: '#065F46', fontSize: 16, lineHeight: 22 }}>
+              Your Bid Has Been Accepted. You Will Receive The Output Documents And Assignment Instructions For Review Shortly.
+            </Text>
+          </View>
+        )}
 
             {/* Bidding Section - Only show if user hasn't bid yet */}
             {!hasUserBid && (
@@ -727,10 +993,17 @@ export default function JobDetailsScreen() {
       {hasUserBid && (
         <View style={styles.footerStatusContainer}>
           <View style={styles.footerStatusContent}>
-            <Ionicons name="time-outline" size={20} color="#F59E0B" />
-            <Text style={styles.footerStatusText}>
-              Your bid is waiting for approval
-            </Text>
+            {(String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') ? (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={20} color="#059669" />
+                <Text style={[styles.footerStatusText, { color: '#065F46' }]}>Your bid has been approved</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="time-outline" size={20} color="#F59E0B" />
+                <Text style={styles.footerStatusText}>Your bid is waiting for approval</Text>
+              </>
+            )}
           </View>
         </View>
       )}
@@ -999,7 +1272,23 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   headerRight: {
-    width: 40,
+    minWidth: 40,
+    alignItems: 'flex-end',
+  },
+  checkInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#D1FAE5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  checkInButtonText: {
+    color: '#065F46',
+    fontWeight: '700',
   },
   content: {
     flex: 1,
@@ -1083,6 +1372,11 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   infoGrid: {
     gap: 16,
   },
@@ -1114,6 +1408,23 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
+  dateChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  dateChip: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  dateChipText: {
     color: '#1F2937',
     fontWeight: '600',
   },
@@ -1371,6 +1682,126 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     flex: 1,
+  },
+  documentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  documentMetaLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  documentMetaValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
+  downloadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#3B82F6',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  downloadButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  videoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  refreshButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  refreshText: {
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
+  videoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#DBEAFE',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: 12,
+    borderRadius: 12,
+  },
+  videoButtonText: {
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
+  videoButtonSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 12,
+    borderRadius: 12,
+  },
+  videoButtonTextSecondary: {
+    color: '#1F2937',
+    fontWeight: '700',
+  },
+  videoEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  videoEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  videoEmptySubtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  checkinsList: {
+    gap: 10,
+  },
+  checkinItem: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  checkinIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkinAddress: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
+  checkinMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   modalOverlay: {
     flex: 1,

@@ -29,12 +29,26 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "sdkVersion": "54.0.0",
-    "scheme": "enspek"
+    "scheme": "enspek",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "33fd78ff-23fa-48cb-9265-b55ae59478f2"
+      }
+    },
+    "owner": "basithzan",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/33fd78ff-23fa-48cb-9265-b55ae59478f2"
+    }
   }
 }

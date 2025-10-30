@@ -93,6 +93,39 @@ export function useInspectorStats() {
     queryFn: async () => {
       console.log('🔄 Fetching inspector statistics...');
       try {
+        // 1) Prefer the same source the old PWA uses for counts
+        try {
+          const profileRes = await apiClient.post('/update-inspector-data');
+          const user = profileRes?.data?.user || profileRes?.data?.data || profileRes?.data;
+          if (user && (user.completedCount !== undefined || user.acceptedCount !== undefined)) {
+            const stats = {
+              success: true,
+              completed_count: Number(user.completedCount || 0),
+              rejected_count: Number(user.rejectedCount || 0),
+              work_in_progress_count: Number(user.acceptedCount || 0),
+              bids_count: Number(user.appliedCount || 0),
+              total_completed: Number(user.completedCount || 0),
+              total_rejected: Number(user.rejectedCount || 0),
+              total_jobs: Number(user.acceptedCount || 0),
+              total_bids: Number(user.appliedCount || 0),
+              stats: {
+                completed: Number(user.completedCount || 0),
+                rejected: Number(user.rejectedCount || 0),
+                workInProgress: Number(user.acceptedCount || 0),
+                bids: Number(user.appliedCount || 0),
+                totalCompleted: Number(user.completedCount || 0),
+                totalRejected: Number(user.rejectedCount || 0),
+                totalJobs: Number(user.acceptedCount || 0),
+                totalBids: Number(user.appliedCount || 0),
+              }
+            };
+            console.log('✅ Stats from update-inspector-data:', stats);
+            return stats;
+          }
+        } catch (primaryErr) {
+          console.log('❌ update-inspector-data failed for stats, falling back...', (primaryErr as any)?.message);
+        }
+
         // Try multiple possible endpoints for statistics
         const endpoints = [
           '/get-inspector-stats',

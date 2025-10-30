@@ -41,6 +41,7 @@ export default function EditProfileScreen() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastApiCallRef = useRef<number>(0);
+  const countriesApiThrottleRef = useRef<number>(0);
 
   // Form fields
   const [formData, setFormData] = useState({
@@ -111,15 +112,25 @@ export default function EditProfileScreen() {
 
   // Separate useEffect to set selected country when both user and countries are available
   useEffect(() => {
-    if (user?.country_id && countries.length > 0) {
+    if ((user?.country_id || formData.country_id) && countries.length > 0) {
+      const idToMatch = Number(formData.country_id || user?.country_id);
       const currentCountry = countries.find(
-        (country: Country) => country.id === user.country_id
+        (country: Country) => Number(country.id) === idToMatch
       );
-      if (currentCountry) {
-        setSelectedCountry(currentCountry);
-      }
+      if (currentCountry) setSelectedCountry(currentCountry);
     }
-  }, [user?.country_id, countries]);
+  }, [user?.country_id, formData.country_id, countries]);
+
+  // Also re-select country whenever profile fetch updates formData.country_id
+  useEffect(() => {
+    if (countries.length === 0) return;
+    const idToMatch = Number(formData.country_id);
+    if (!idToMatch) return;
+    if (!selectedCountry || Number(selectedCountry.id) !== idToMatch) {
+      const match = countries.find((c) => Number(c.id) === idToMatch);
+      if (match) setSelectedCountry(match);
+    }
+  }, [formData.country_id, countries]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -209,6 +220,16 @@ export default function EditProfileScreen() {
             cost_type: inspectorDetails.cost_type || prev.cost_type,
             cost: inspectorDetails.cost || prev.cost,
           }));
+
+          // If API provides country name, pre-select immediately even before countries load
+          const countryName = (details.country_name || details.country?.name || details.countryName);
+          if ((details.country_id || user.country_id) && countryName) {
+            setSelectedCountry({
+              id: Number(details.country_id || user.country_id),
+              name: String(countryName),
+              code: undefined,
+            });
+          }
         }
       }
     } catch (error) {
@@ -221,19 +242,37 @@ export default function EditProfileScreen() {
   const loadCountries = async () => {
     if (isLoadingCountries || countries.length > 0) return; // Prevent duplicate calls
     
-    // Rate limiting: prevent API calls more than once every 2 seconds
+    // Separate rate limit for countries to avoid blocking by profile fetch
     const now = Date.now();
-    if (now - lastApiCallRef.current < 2000) {
+    if (now - countriesApiThrottleRef.current < 500) {
       return;
     }
-    lastApiCallRef.current = now;
+    countriesApiThrottleRef.current = now;
     
     try {
       setIsLoadingCountries(true);
       const result = await getCountries();
       if (result.success) {
-        setCountries(result.data);
-        setFilteredCountries(result.data);
+        // Accept multiple shapes: {data:[...]}, {countries:[...]}, data: {countries:[...]}
+        const rawList =
+          Array.isArray(result.data) ? result.data :
+          Array.isArray((result as any).countries) ? (result as any).countries :
+          Array.isArray((result.data || {}).countries) ? (result.data as any).countries :
+          [];
+        // Normalize countries to a common shape { id, name, code }
+        const normalized: Country[] = rawList.map((c: any) => ({
+          id: Number(c.id ?? c.country_id ?? c.value ?? 0),
+          name: String(c.name ?? c.country_name ?? c.label ?? '').trim(),
+          code: c.code ?? c.iso_code ?? c.country_code,
+        })).filter((c: Country) => c.id && c.name);
+        setCountries(normalized);
+        setFilteredCountries(normalized);
+        // Ensure picker list is populated immediately
+        if (normalized.length && (!selectedCountry && (user?.country_id || formData.country_id))) {
+          const idToMatch = Number(formData.country_id || user?.country_id);
+          const match = normalized.find((c) => Number(c.id) === idToMatch);
+          if (match) setSelectedCountry(match);
+        }
       } else {
         Alert.alert('Error', result.error);
       }
@@ -466,10 +505,18 @@ export default function EditProfileScreen() {
             <Text style={styles.fieldLabel}>Country *</Text>
             <Pressable
               style={styles.countryPicker}
-              onPress={() => setShowCountryPicker(true)}
+              onPress={() => {
+                if (!countries.length) {
+                  // Attempt to load countries if not yet loaded
+                  loadCountries();
+                }
+                // Ensure list is visible
+                setFilteredCountries(countries);
+                setShowCountryPicker(true);
+              }}
             >
               <Text style={[styles.countryText, !selectedCountry && styles.placeholderText]}>
-                {selectedCountry ? selectedCountry.name : 'Select Country'}
+                {selectedCountry?.name || (countries.find(c => Number(c.id) === Number(formData.country_id))?.name) || 'Select Country'}
               </Text>
               <Ionicons name="chevron-down" size={20} color="#64748B" />
             </Pressable>
