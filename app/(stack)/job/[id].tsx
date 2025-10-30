@@ -1,0 +1,1700 @@
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  StyleSheet, 
+  Pressable, 
+  TextInput, 
+  Alert,
+  ActivityIndicator,
+  Modal,
+  Linking,
+  Platform
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../../../src/api/client';
+
+export default function JobDetailsScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  
+  console.log('JobDetailsScreen rendered with new map implementation');
+  
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidCurrency, setBidCurrency] = useState('USD');
+  const [bidDates, setBidDates] = useState<string[]>([]);
+  const [bidAmountType, setBidAmountType] = useState('daily');
+  const [isSubmittingBid, setIsSubmittingBid] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [tempSelectedDates, setTempSelectedDates] = useState<Date[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Check if bid form is valid
+  const isBidFormValid = React.useMemo(() => {
+    return bidAmount.trim() !== '' && 
+           !isNaN(Number(bidAmount)) && 
+           Number(bidAmount) > 0 && 
+           selectedDates.length > 0;
+  }, [bidAmount, selectedDates]);
+
+  // Auto-scroll to Submit Your Bid section when bid button is clicked
+  const scrollToBidSection = useCallback(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }
+  }, []);
+
+  // Handle date selection
+  const handleDateSelect = useCallback((event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setSelectedDates(prev => {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const isAlreadySelected = prev.some(date => 
+          date.toISOString().split('T')[0] === dateStr
+        );
+        
+        if (isAlreadySelected) {
+          // Remove if already selected
+          return prev.filter(date => 
+            date.toISOString().split('T')[0] !== dateStr
+          );
+        } else {
+          // Add if not selected
+          return [...prev, selectedDate].sort((a, b) => a.getTime() - b.getTime());
+        }
+      });
+    }
+  }, []);
+
+  // Remove selected date
+  const removeDate = useCallback((dateToRemove: Date) => {
+    setSelectedDates(prev => prev.filter(date => 
+      date.toISOString().split('T')[0] !== dateToRemove.toISOString().split('T')[0]
+    ));
+  }, []);
+
+  // Calendar utility functions
+  const getDaysInMonth = useCallback((date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  }, []);
+
+  const isDateSelected = useCallback((date: Date, selectedDates: Date[]) => {
+    return selectedDates.some(selectedDate => 
+      selectedDate.toISOString().split('T')[0] === date.toISOString().split('T')[0]
+    );
+  }, []);
+
+  const toggleDateSelection = useCallback((date: Date) => {
+    setTempSelectedDates(prev => {
+      const isSelected = prev.some(selectedDate => 
+        selectedDate.toISOString().split('T')[0] === date.toISOString().split('T')[0]
+      );
+      
+      if (isSelected) {
+        return prev.filter(selectedDate => 
+          selectedDate.toISOString().split('T')[0] !== date.toISOString().split('T')[0]
+        );
+      } else {
+        return [...prev, date].sort((a, b) => a.getTime() - b.getTime());
+      }
+    });
+  }, []);
+
+  const saveSelectedDates = useCallback(() => {
+    setSelectedDates(tempSelectedDates);
+    setShowDatePicker(false);
+  }, [tempSelectedDates]);
+
+  const openDatePicker = useCallback(() => {
+    setTempSelectedDates([...selectedDates]);
+    setShowDatePicker(true);
+  }, [selectedDates]);
+
+  const currencies = [
+    { code: 'USD', name: 'US Dollar', symbol: '$' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'GBP', name: 'British Pound', symbol: '£' },
+    { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+    { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ' },
+    { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼' },
+  ];
+
+  // Fetch job details
+  const { data: jobData, isLoading, error } = useQuery({
+    queryKey: ['job-details', id],
+    queryFn: async () => {
+      console.log('Fetching job details for ID:', id);
+      const response = await apiClient.post('/get-single-enquiry', { id: Number(id) });
+      console.log('API Response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    },
+    enabled: !!id,
+  });
+
+  // Bid mutation
+  const bidMutation = useMutation({
+    mutationFn: async (bidData: any) => {
+      const response = await apiClient.post('/bid-for-enquiry', bidData);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      console.log('✅ Bid submitted successfully:', data);
+      console.log('🔄 Invalidating queries for job ID:', id);
+      
+      Alert.alert('Success', 'Your bid has been submitted successfully!');
+      
+      // Invalidate and refetch queries
+      queryClient.invalidateQueries({ queryKey: ['my-bids'] });
+      queryClient.invalidateQueries({ queryKey: ['nearby-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['bid-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['job-details', id] });
+      
+      // Force refetch nearby jobs and bid jobs
+      queryClient.refetchQueries({ queryKey: ['nearby-jobs'] });
+      queryClient.refetchQueries({ queryKey: ['bid-jobs'] });
+      
+      console.log('🔄 Queries invalidated, navigating back...');
+      router.back();
+    },
+    onError: (error: any) => {
+      console.error('Bid submission error:', error);
+      Alert.alert('Error', error?.response?.data?.message || 'Failed to submit bid');
+    },
+  });
+
+  const handleSubmitBid = useCallback(async () => {
+    if (!isBidFormValid) {
+      Alert.alert('Required Details', 'Please fill required details first');
+      // Auto-scroll to bid section when form is invalid
+      scrollToBidSection();
+      return;
+    }
+
+    setIsSubmittingBid(true);
+    
+    try {
+      await bidMutation.mutateAsync({
+        id: Number(id),
+        amount: Number(bidAmount),
+        dates: selectedDates.map(date => date.toISOString().split('T')[0]),
+        currencies: bidCurrency,
+        amount_type: bidAmountType
+      });
+    } catch (error) {
+      console.error('Bid submission error:', error);
+    } finally {
+      setIsSubmittingBid(false);
+    }
+  }, [isBidFormValid, bidAmount, selectedDates, bidCurrency, bidAmountType, id, bidMutation, scrollToBidSection]);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Loading job details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !jobData?.success) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.errorTitle}>Unable to load job</Text>
+          <Text style={styles.errorMessage}>
+            {error?.message || 'Failed to fetch job details'}
+          </Text>
+          <Pressable style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const job = jobData?.enquiry || jobData?.data || jobData;
+  
+  // Debug logging for job details
+  console.log('🔍 Job Details Debug:', {
+    jobId: job?.id,
+    jobStatus: job?.status,
+    jobData: jobData,
+    hasUserBid: jobData?.already_bidded || jobData?.my_bid,
+    userBidStatus: jobData?.my_bid?.status || jobData?.my_bid_status
+  });
+  
+  // Special debug for RFI105
+  if (job?.id === 105 || job?.id === '105') {
+    console.log('🔍 RFI105 Special Debug:', {
+      jobId: job?.id,
+      jobStatus: job?.status,
+      statusType: typeof job?.status,
+      statusString: String(job?.status),
+      statusNumber: parseInt(String(job?.status)),
+      jobTitle: job?.job_title || job?.title,
+      fullJobData: job,
+      fullResponseData: jobData
+    });
+  }
+  
+  // Special debug for RFI270
+  if (job?.id === 270 || job?.id === '270') {
+    console.log('🔍 RFI270 Special Debug:', {
+      jobId: job?.id,
+      jobStatus: job?.status,
+      statusType: typeof job?.status,
+      statusString: String(job?.status),
+      statusNumber: parseInt(String(job?.status)),
+      jobTitle: job?.job_title || job?.title,
+      fullJobData: job,
+      fullResponseData: jobData
+    });
+  }
+  
+  // Check if user has already bid on this job
+  const hasUserBid = jobData?.already_bidded || jobData?.my_bid;
+  const userBidAmount = jobData?.my_bid?.amount || jobData?.my_bid_amount;
+  const userBidStatus = jobData?.my_bid?.status || jobData?.my_bid_status;
+  const userBidCurrency = jobData?.my_bid?.currencies || jobData?.my_bid_currency;
+
+  // Function to get currency symbol
+  const getCurrencySymbol = (currencyCode: string) => {
+    const currencyMap: Record<string, string> = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹',
+      'AED': 'د.إ',
+      'SAR': '﷼'
+    };
+    return currencyMap[currencyCode] || '$';
+  };
+
+  // Status helper functions
+  const getStatusColor = (status: string | number | null | undefined) => {
+    // Handle null/undefined status - treat as Active (green background)
+    if (status === null || status === undefined) {
+      console.log('🔍 Color Debug - Null/undefined status, defaulting to Active green');
+      return '#10B981'; // Light green for active status
+    }
+    
+    const statusStr = String(status).toLowerCase();
+    
+    // Use API-based status determination - only consider explicitly completed/finished as completed
+    if (statusStr === 'completed' || statusStr === 'finished') {
+      return '#10B981'; // Light green for completed
+    }
+    
+    switch (statusStr) {
+      case '0':
+      case 'active': return '#10B981'; // Light green for active status
+      case '1':
+      case 'pending': return '#F59E0B';
+      case '2':
+      case 'accepted': return '#10B981';
+      case '3':
+      case 'rejected': return '#EF4444';
+      case '4':
+      case 'cancelled': return '#6B7280';
+      case '5': return '#10B981'; // Status 5 is active, not completed
+      case '6':
+      case 'in_progress': return '#3B82F6';
+      default: return '#10B981'; // Default to active green for unknown status
+    }
+  };
+
+  const getStatusText = (status: string | number | null | undefined) => {
+    console.log('🔍 Status Debug - Raw status:', status, 'Type:', typeof status);
+    
+    // Handle null/undefined status - treat as Active (open for bidding)
+    if (status === null || status === undefined) {
+      console.log('🔍 Status Debug - Null/undefined status, defaulting to Active');
+      return 'Active';
+    }
+    
+    const statusStr = String(status).toLowerCase();
+    console.log('🔍 Status Debug - Status string:', statusStr);
+    
+    // Use API-based status determination - only consider explicitly completed/finished as completed
+    if (statusStr === 'completed' || statusStr === 'finished') {
+      return 'Completed';
+    }
+    
+    // Map numeric statuses based on API logic
+    switch (statusStr) {
+      case '0': return 'Active';
+      case '1': return 'Pending';
+      case '2': return 'Accepted';
+      case '3': return 'Rejected';
+      case '4': return 'Cancelled';
+      case '5': return 'Active'; // Status 5 is not completed based on user feedback
+      case '6': return 'In Progress';
+      default: return 'Active'; // Default to Active for any unknown status
+    }
+  };
+
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Job Details</Text>
+        <View style={styles.headerRight} />
+      </View>
+
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.content} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Job Header */}
+        <View style={styles.jobHeader}>
+          <View style={styles.jobHeaderTop}>
+            <Text style={styles.jobTitle}>{job?.job_title || job?.title || 'Inspection Job'}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job?.status) + '20' }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(job?.status) }]}>
+                {getStatusText(job?.status)}
+              </Text>
+            </View>
+          </View>
+          
+          {/* RFI Number and Stat Badges - Same Row */}
+          <View style={styles.rfiRow}>
+            <Text style={styles.jobId}>RFI{String(job?.id ?? '')}</Text>
+            <View style={styles.badgesRow}>
+              <View style={[styles.statusBadge, styles.statBadge]}>
+                <Text style={styles.statBadgeText}>
+                  My Bid: {userBidAmount ? `${getCurrencySymbol(userBidCurrency || 'USD')}${userBidAmount}` : 'No Bids'}
+                </Text>
+              </View>
+              <View style={[styles.statusBadge, styles.statBadge]}>
+                <Text style={styles.statBadgeText}>
+                  Views: {job?.viewers_count || job?.views_count || job?.enquiry_views || job?.views || job?.view_count || job?.total_views || jobData?.enquiry?.viewers_count || jobData?.enquiry?.views_count || jobData?.enquiry?.views || jobData?.views_count || '0'}
+                </Text>
+              </View>
+              {hasUserBid && (
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(userBidStatus) + '20' }]}>
+                  <Text style={[styles.statusText, { color: getStatusColor(userBidStatus) }]}>
+                    {getStatusText(userBidStatus)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Job Information */}
+        <View style={[styles.section, styles.firstSection]}>
+          <Text style={styles.sectionTitle}>Job Information</Text>
+          
+          <View style={styles.infoGrid}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Category</Text>
+              <Text style={styles.infoValue}>
+                {job?.category?.name || job?.category_name || job?.category || 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Commodity</Text>
+              <Text style={styles.infoValue}>
+                {job?.commodity?.name || job?.commodity_name || job?.commodity || 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Country</Text>
+              <Text style={styles.infoValue}>
+                {job?.country?.name || job?.country_name || 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Vendor</Text>
+              <Text style={styles.infoValue}>
+                {job?.vendor || job?.supplier_name || 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Location</Text>
+              <Text style={styles.infoValue}>
+                {job?.vendor_location || job?.supplier_location || 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>No of Visits</Text>
+              <Text style={styles.infoValue}>
+                {job?.no_of_visits || job?.visits || job?.number_of_visits || 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Posted Date</Text>
+              <Text style={styles.infoValue}>
+                {job?.created_at ? formatDate(job.created_at) : 'N/A'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Location Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Location</Text>
+          <View style={styles.locationContainer}>
+            <View style={styles.locationHeader}>
+              <Ionicons name="location-outline" size={20} color="#3B82F6" />
+              <Text style={styles.locationTitle}>
+                {job?.vendor_location || job?.supplier_location || job?.location || 'Job Location'}
+              </Text>
+            </View>
+            <View style={styles.mapContainer}>
+              {(job?.latitude && job?.longitude) ? (
+                <Pressable 
+                  style={styles.mapWrapper}
+                  onPress={() => {
+                    const url = `https://maps.google.com/maps?q=${job.latitude},${job.longitude}`;
+                    Linking.openURL(url);
+                  }}
+                >
+                  <View style={styles.mapPlaceholder}>
+                    <Ionicons name="map-outline" size={48} color="#3B82F6" />
+                    <Text style={styles.mapPlaceholderText}>📍 View on Google Maps</Text>
+                    <Text style={styles.mapPlaceholderSubtext}>
+                      Tap to open location in Google Maps
+                    </Text>
+                    <View style={styles.mapCoordinates}>
+                      <Text style={styles.coordinatesText}>
+                        {job.latitude}, {job.longitude}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ) : (
+                <View style={styles.mapPlaceholder}>
+                  <Ionicons name="map-outline" size={48} color="#6B7280" />
+                  <Text style={styles.mapPlaceholderText}>Map View</Text>
+                  <Text style={styles.mapPlaceholderSubtext}>
+                    {job?.vendor_location || job?.supplier_location || 'Location details will be provided upon job acceptance'}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {(job?.latitude && job?.longitude) && (
+              <Pressable 
+                style={styles.directionsButton}
+                onPress={() => {
+                  const url = `https://maps.google.com/maps?daddr=${job.latitude},${job.longitude}`;
+                  Linking.openURL(url);
+                }}
+              >
+                <Ionicons name="navigate-outline" size={16} color="#3B82F6" />
+                <Text style={styles.directionsButtonText}>Get Directions</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Scope & Requirements */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Scope & Requirements</Text>
+          <Text style={styles.scopeText}>
+            {job?.enquiry_scope || job?.scope || job?.description || job?.note || 'No scope details provided'}
+          </Text>
+        </View>
+
+        {/* Inspection Dates */}
+        {job?.est_inspection_date && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Estimated Inspection Date</Text>
+            <Text style={styles.dateText}>
+              {formatDate(job.est_inspection_date)}
+            </Text>
+          </View>
+        )}
+
+        {/* Additional Requirements */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Additional Requirements</Text>
+          <View style={styles.requirementsContainer}>
+            <Text style={styles.requirementsText}>
+              {job?.note || 
+               job?.additional_requirements || 
+               job?.special_requirements || 
+               job?.requirements || 
+               job?.additional_note ||
+               job?.enquiry?.note ||
+               job?.enquiry?.additional_requirements ||
+               'No additional requirements specified'}
+            </Text>
+            {job?.required_documents && (
+              <View style={styles.documentsContainer}>
+                <Text style={styles.documentsTitle}>Required Documents:</Text>
+                {Array.isArray(job.required_documents) ? (
+                  job.required_documents.map((doc: string, index: number) => (
+                    <View key={index} style={styles.documentItem}>
+                      <Ionicons name="document-text-outline" size={16} color="#3B82F6" />
+                      <Text style={styles.documentText}>{doc}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.documentItem}>
+                    <Ionicons name="document-text-outline" size={16} color="#3B82F6" />
+                    <Text style={styles.documentText}>{job.required_documents}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+
+            {/* Bidding Section - Only show if user hasn't bid yet */}
+            {!hasUserBid && (
+            <View style={[styles.section, styles.lastSection, styles.biddingSection]}>
+          <Text style={styles.sectionTitle}>Submit Your Bid</Text>
+          
+          {/* Bid Amount */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Bid Amount *</Text>
+            <View style={styles.amountInputContainer}>
+              <TextInput
+                style={styles.amountInput}
+                value={bidAmount}
+                onChangeText={setBidAmount}
+                placeholder="Enter your bid amount"
+                keyboardType="numeric"
+                placeholderTextColor="#9CA3AF"
+              />
+              <Pressable 
+                style={styles.currencySelector}
+                onPress={() => setShowCurrencyModal(true)}
+              >
+                <Text style={styles.currencyText}>{bidCurrency}</Text>
+                <Ionicons name="chevron-down" size={16} color="#6B7280" />
+              </Pressable>
+            </View>
+          </View>
+
+              {/* Amount Type */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Amount Type</Text>
+                <View style={styles.amountTypeContainer}>
+                  <Pressable
+                    style={[styles.amountTypeButton, bidAmountType === 'daily' && styles.amountTypeButtonActive]}
+                    onPress={() => setBidAmountType('daily')}
+                  >
+                    <Text style={[
+                      styles.amountTypeText, 
+                      bidAmountType === 'daily' && styles.amountTypeTextActive
+                    ]}>
+                      Daily
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.amountTypeButton, bidAmountType === 'hourly' && styles.amountTypeButtonActive]}
+                    onPress={() => setBidAmountType('hourly')}
+                  >
+                    <Text style={[
+                      styles.amountTypeText, 
+                      bidAmountType === 'hourly' && styles.amountTypeTextActive
+                    ]}>
+                      Hourly
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.amountTypeButton, bidAmountType === 'monthly' && styles.amountTypeButtonActive]}
+                    onPress={() => setBidAmountType('monthly')}
+                  >
+                    <Text style={[
+                      styles.amountTypeText, 
+                      bidAmountType === 'monthly' && styles.amountTypeTextActive
+                    ]}>
+                      Monthly
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.amountTypeButton, bidAmountType === 'project' && styles.amountTypeButtonActive]}
+                    onPress={() => setBidAmountType('project')}
+                  >
+                    <Text style={[
+                      styles.amountTypeText, 
+                      bidAmountType === 'project' && styles.amountTypeTextActive
+                    ]}>
+                      For Project
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+          {/* Choose Dates */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Choose Dates *</Text>
+            <Text style={styles.inputHelper}>
+              Select multiple dates you're available for this inspection
+            </Text>
+            
+            {/* Date Picker Button */}
+            <Pressable
+              style={styles.datePickerButton}
+              onPress={openDatePicker}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
+              <Text style={styles.datePickerButtonText}>
+                {selectedDates.length > 0 
+                  ? `Selected ${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''}`
+                  : 'Select Dates'
+                }
+              </Text>
+              <Ionicons name="chevron-down" size={16} color="#6B7280" />
+            </Pressable>
+
+            {/* Selected Dates Display */}
+            {selectedDates.length > 0 && (
+              <View style={styles.selectedDatesContainer}>
+                {selectedDates.map((date, index) => (
+                  <View key={index} style={styles.selectedDateItem}>
+                    <Text style={styles.selectedDateText}>
+                      {date.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </Text>
+                    <Pressable
+                      style={styles.removeDateButton}
+                      onPress={() => removeDate(date)}
+                    >
+                      <Ionicons name="close" size={16} color="#EF4444" />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+        </View>
+        )}
+
+      </ScrollView>
+
+      {/* Footer Status Message - Show when user has bid */}
+      {hasUserBid && (
+        <View style={styles.footerStatusContainer}>
+          <View style={styles.footerStatusContent}>
+            <Ionicons name="time-outline" size={20} color="#F59E0B" />
+            <Text style={styles.footerStatusText}>
+              Your bid is waiting for approval
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Sticky Submit Bid Button - Only show if user hasn't bid yet */}
+      {!hasUserBid && (
+      <View style={styles.stickyButtonContainer}>
+        <Pressable
+          style={[
+            styles.submitButton, 
+            (isSubmittingBid || hasUserBid) && styles.submitButtonDisabled
+          ]}
+          onPress={hasUserBid ? undefined : handleSubmitBid}
+          disabled={isSubmittingBid || hasUserBid}
+        >
+          {isSubmittingBid ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : hasUserBid ? (
+            <Text style={styles.submitButtonText}>
+              Already Bid
+            </Text>
+          ) : (
+            <Text style={styles.submitButtonText}>
+              Bid Now
+            </Text>
+          )}
+        </Pressable>
+      </View>
+      )}
+
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Currency</Text>
+              <Pressable onPress={() => setShowCurrencyModal(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.currencyList}>
+              {currencies.map((currency) => (
+                <Pressable
+                  key={currency.code}
+                  style={[
+                    styles.currencyItem,
+                    bidCurrency === currency.code && styles.currencyItemSelected
+                  ]}
+                  onPress={() => {
+                    setBidCurrency(currency.code);
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <View style={styles.currencyInfo}>
+                    <Text style={styles.currencyCode}>{currency.code}</Text>
+                    <Text style={styles.currencyName}>{currency.name}</Text>
+                  </View>
+                  <Text style={styles.currencySymbol}>{currency.symbol}</Text>
+                    {bidCurrency === currency.code && (
+                      <Ionicons name="checkmark" size={20} color="#10B981" />
+                    )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+          </Modal>
+
+          {/* Calendar Modal */}
+          {showDatePicker && (
+            <Modal
+              visible={showDatePicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.calendarModalContent}>
+                  <View style={styles.calendarHeader}>
+                    <Text style={styles.calendarTitle}>Select Available Dates</Text>
+                    <Pressable onPress={() => setShowDatePicker(false)}>
+                      <Ionicons name="close" size={24} color="#6B7280" />
+                    </Pressable>
+                  </View>
+                  
+                  <View style={styles.calendarContainer}>
+                    {/* Month Navigation */}
+                    <View style={styles.monthNavigation}>
+                      <Pressable
+                        style={styles.monthNavButton}
+                        onPress={() => {
+                          const newMonth = new Date(currentMonth);
+                          newMonth.setMonth(newMonth.getMonth() - 1);
+                          setCurrentMonth(newMonth);
+                        }}
+                      >
+                        <Ionicons name="chevron-back" size={20} color="#3B82F6" />
+                      </Pressable>
+                      
+                      <Text style={styles.monthYearText}>
+                        {currentMonth.toLocaleDateString('en-US', { 
+                          month: 'long', 
+                          year: 'numeric' 
+                        })}
+                      </Text>
+                      
+                      <Pressable
+                        style={styles.monthNavButton}
+                        onPress={() => {
+                          const newMonth = new Date(currentMonth);
+                          newMonth.setMonth(newMonth.getMonth() + 1);
+                          setCurrentMonth(newMonth);
+                        }}
+                      >
+                        <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
+                      </Pressable>
+                    </View>
+                    
+                    {/* Calendar Grid */}
+                    <View style={styles.calendarGrid}>
+                      {/* Day Headers */}
+                      <View style={styles.dayHeaders}>
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                          <Text key={day} style={styles.dayHeader}>{day}</Text>
+                        ))}
+                      </View>
+                      
+                      {/* Calendar Days */}
+                      <View style={styles.calendarDays}>
+                        {getDaysInMonth(currentMonth).map((date, index) => (
+                          <Pressable
+                            key={index}
+                            style={[
+                              styles.calendarDay,
+                              date && isDateSelected(date, tempSelectedDates) && styles.calendarDaySelected,
+                              date && date < new Date() && styles.calendarDayDisabled
+                            ]}
+                            onPress={() => date && date >= new Date() && toggleDateSelection(date)}
+                            disabled={!date || date < new Date()}
+                          >
+                            {date && (
+                              <Text style={[
+                                styles.calendarDayText,
+                                isDateSelected(date, tempSelectedDates) && styles.calendarDayTextSelected,
+                                date < new Date() && styles.calendarDayTextDisabled
+                              ]}>
+                                {date.getDate()}
+                              </Text>
+                            )}
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                    
+                    {/* Selected Dates Summary */}
+                    {tempSelectedDates.length > 0 && (
+                      <View style={styles.selectedDatesSummary}>
+                        <Text style={styles.selectedDatesTitle}>
+                          Selected Dates ({tempSelectedDates.length}):
+                        </Text>
+                        <View style={styles.selectedDatesList}>
+                          {tempSelectedDates.map((date, index) => (
+                            <Text key={index} style={styles.calendarSelectedDateItem}>
+                              {date.toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </Text>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                    
+                    {/* Action Buttons */}
+                    <View style={styles.calendarActions}>
+                      <Pressable
+                        style={styles.cancelButton}
+                        onPress={() => setShowDatePicker(false)}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </Pressable>
+                      
+                      <Pressable
+                        style={styles.saveButton}
+                        onPress={saveSelectedDates}
+                      >
+                        <Text style={styles.saveButtonText}>Save Dates</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          )}
+        </SafeAreaView>
+      );
+    }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  headerRight: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100, // Space for sticky button
+  },
+  jobHeader: {
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  jobHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  jobTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    flex: 1,
+    marginRight: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  jobId: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  rfiRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    gap: 4, // Small gap between badges
+  },
+  statBadge: {
+    backgroundColor: '#3B82F620', // Blue with 20% opacity
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3B82F6', // Blue text
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 8,
+    padding: 20,
+    borderBottomWidth: 8,
+    borderBottomColor: '#E5E7EB80',
+  },
+  firstSection: {
+    marginTop: 0, // Remove top margin from first section
+  },
+  lastSection: {
+    borderBottomWidth: 0, // Remove border from last section
+  },
+  biddingSection: {
+    backgroundColor: '#F0F9FF', // Very light blue background
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  infoGrid: {
+    gap: 16,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+    flex: 1,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '600',
+    flex: 2,
+    textAlign: 'right',
+  },
+  scopeText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '600',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  inputHelper: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  amountInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  amountInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  currencySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#E5E7EB',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  amountTypeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  amountTypeButton: {
+    flex: 1,
+    minWidth: '45%',
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  amountTypeButtonActive: {
+    backgroundColor: '#10B981',
+  },
+  amountTypeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  amountTypeTextActive: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  datesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  dateButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  dateButtonActive: {
+    backgroundColor: '#D1FAE5',
+    borderColor: '#10B981',
+  },
+  dateButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  dateButtonTextActive: {
+    color: '#047857',
+  },
+  noDatesText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontStyle: 'italic',
+  },
+  notesInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F2937',
+    textAlignVertical: 'top',
+  },
+  stickyButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: 34, // Extra padding for safe area
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  submitButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  locationContainer: {
+    gap: 16,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  locationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  mapContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  map: {
+    height: 200,
+    width: '100%',
+  },
+  mapWrapper: {
+    height: 200,
+    width: '100%',
+  },
+  mapCoordinates: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#D1FAE5',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  coordinatesText: {
+    fontSize: 12,
+    color: '#047857',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  mapPlaceholder: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  mapPlaceholderText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  mapPlaceholderSubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  directionsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#D1FAE5',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  directionsButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#047857',
+  },
+  requirementsContainer: {
+    gap: 16,
+  },
+  requirementsText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+  },
+  documentsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  documentsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  documentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  documentText: {
+    fontSize: 14,
+    color: '#374151',
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  currencyList: {
+    maxHeight: 400,
+  },
+  currencyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  currencyItemSelected: {
+    backgroundColor: '#D1FAE5',
+  },
+  currencyInfo: {
+    flex: 1,
+  },
+  currencyCode: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  currencyName: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginRight: 12,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+    color: '#1F2937',
+    flex: 1,
+    marginLeft: 12,
+  },
+  selectedDatesContainer: {
+    marginTop: 12,
+    gap: 8,
+  },
+  selectedDateItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  selectedDateText: {
+    fontSize: 14,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  removeDateButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  datePickerInfo: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginVertical: 16,
+  },
+  addDateButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  addDateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  datePickerContainer: {
+    padding: 20,
+  },
+  dateInputContainer: {
+    marginVertical: 16,
+  },
+  dateInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dateInputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1F2937',
+    width: 60,
+  },
+  dateInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: '#1F2937',
+    backgroundColor: '#FFFFFF',
+  },
+  quickDateButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  quickDateButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickDateButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  calendarModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    margin: 20,
+    maxHeight: '80%',
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  calendarTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  calendarContainer: {
+    padding: 20,
+  },
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  monthNavButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  monthYearText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  calendarGrid: {
+    marginBottom: 20,
+  },
+  dayHeaders: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  dayHeader: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    paddingVertical: 8,
+  },
+  calendarDays: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDay: {
+    width: '14.28%',
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    margin: 1,
+  },
+  calendarDaySelected: {
+    backgroundColor: '#3B82F6',
+  },
+  calendarDayDisabled: {
+    opacity: 0.3,
+  },
+  calendarDayText: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  calendarDayTextDisabled: {
+    color: '#9CA3AF',
+  },
+  selectedDatesSummary: {
+    backgroundColor: '#F0F9FF',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  selectedDatesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  selectedDatesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  calendarSelectedDateItem: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  calendarActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  footerStatusContainer: {
+    backgroundColor: '#FEF3C7',
+    borderTopWidth: 1,
+    borderTopColor: '#F59E0B',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  footerStatusContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  footerStatusText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400E',
+    textAlign: 'center',
+  },
+});
