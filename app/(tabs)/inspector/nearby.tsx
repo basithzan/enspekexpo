@@ -1,5 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType } from '../../../src/utils/haptics';
 
 export default function NearbyJobs() {
   const router = useRouter();
@@ -9,12 +11,13 @@ export default function NearbyJobs() {
       <Text className="text-white text-2xl font-bold mb-4">Nearby Jobs</Text>
       <Text className="text-[#A8B0B9] mb-6">Browse available inspection jobs in your area.</Text>
       
-      <Pressable 
+      <HapticPressable 
         onPress={() => router.back()}
         className="bg-[#3B82F6] rounded-2xl px-4 py-3 items-center"
+        hapticType={HapticType.Light}
       >
         <Text className="text-white font-semibold">Back</Text>
-      </Pressable>
+      </HapticPressable>
     </View>
   );
 }

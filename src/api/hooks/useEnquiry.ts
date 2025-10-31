@@ -84,9 +84,8 @@ export function useDeleteInspectionDoc() {
 export function useEnquiryCheckIn() {
   return useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiClient.post('/add-enquiry-check-in', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // axios will automatically detect FormData and set Content-Type with boundary
+      const response = await apiClient.post('/add-enquiry-check-in', formData);
       return response.data;
     },
   });

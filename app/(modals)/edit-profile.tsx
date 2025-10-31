@@ -20,6 +20,8 @@ import { useProfile } from '../../src/api/hooks/useProfile';
 import { apiClient } from '../../src/api/client';
 import * as ImagePicker from 'expo-image-picker';
 
+const API_BASE_URL = 'https://erpbeta.enspek.com';
+
 interface Country {
   id: number;
   name: string;
@@ -27,9 +29,8 @@ interface Country {
 }
 
 export default function EditProfileScreen() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { updateProfile, getCountries, loading } = useProfile();
-  const { updateUser } = useAuth();
   const router = useRouter();
   const [countries, setCountries] = useState<Country[]>([]);
   const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
@@ -49,6 +50,8 @@ export default function EditProfileScreen() {
     email: '',
     phone: '',
     company_name: '',
+    company_size: '',
+    industry: '',
     country_id: 0,
     // Date of birth
     date_of_birth: '',
@@ -74,24 +77,28 @@ export default function EditProfileScreen() {
     cost_type: '',
     cost: '',
   });
+  
+  const [avatarFile, setAvatarFile] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
       setFormData({
-        name: user.name || '',
+        name: user.name || user.client_details?.name || '',
         email: user.email || '',
-        phone: user.phone || '',
-        company_name: user.company_name || '',
-        country_id: user.country_id || 0,
+        phone: user.phone || user.client_details?.phone || user.client_details?.mobile || '',
+        company_name: user.company_name || user.client_details?.company_name || '',
+        company_size: user.client_details?.company_size || '',
+        industry: user.client_details?.industry || '',
+        country_id: user.country_id || user.client_details?.country?.id || 0,
         date_of_birth: '',
         location: '',
         address: '',
-        city: '',
+        city: user.client_details?.city || '',
         state: '',
         postal_code: '',
         website: '',
         linkedin: '',
-        bio: '',
+        bio: user.client_details?.bio || '',
         nationality: '',
         specialization: '',
         experience_years: '',
@@ -103,6 +110,11 @@ export default function EditProfileScreen() {
         cost_type: '',
         cost: '',
       });
+      
+      if (user?.client_details?.avatar) {
+        const avatarUrl = user.client_details.avatar;
+        setAvatar(avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`);
+      }
       
       // Fetch user profile data
       fetchUserProfile();
@@ -154,7 +166,27 @@ export default function EditProfileScreen() {
     try {
       setIsLoadingProfile(true);
       
-      if (user?.type === 'inspector') {
+      if (user?.type === 'client') {
+        // For clients, profile data is already in user object, just update form
+        if (user?.client_details) {
+          setFormData(prev => ({
+            ...prev,
+            name: user.client_details.name || user.name || prev.name,
+            phone: user.client_details.phone || user.client_details.mobile || user.phone || prev.phone,
+            company_name: user.client_details.company_name || prev.company_name,
+            company_size: user.client_details.company_size || prev.company_size,
+            city: user.client_details.city || prev.city,
+            industry: user.client_details.industry || prev.industry,
+            bio: user.client_details.bio || prev.bio,
+            country_id: user.client_details.country?.id || user.country_id || prev.country_id,
+          }));
+          
+          if (user.client_details.avatar) {
+            const avatarUrl = user.client_details.avatar;
+            setAvatar(avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`);
+          }
+        }
+      } else if (user?.type === 'inspector') {
         // For inspectors, try multiple endpoints to get profile data
         const endpoints = [
           '/get-inspector-profile',
@@ -302,8 +334,18 @@ export default function EditProfileScreen() {
 
       if (!result.canceled && result.assets[0]) {
         setAvatar(result.assets[0].uri);
-        // TODO: Upload image to server
-        // For now, we'll just store the local URI
+        // For client, we need to store the file for FormData upload
+        if (user?.type === 'client') {
+          const filename = result.assets[0].uri.split('/').pop() || 'avatar.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          
+          setAvatarFile({
+            uri: result.assets[0].uri,
+            type,
+            name: filename,
+          });
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -351,24 +393,40 @@ export default function EditProfileScreen() {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      Alert.alert('Error', 'Name is required');
-      return false;
-    }
-    if (!formData.email.trim()) {
-      Alert.alert('Error', 'Email is required');
-      return false;
-    }
-    if (!formData.email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Error', 'User name is required');
       return false;
     }
     if (!formData.phone.trim()) {
-      Alert.alert('Error', 'Phone number is required');
+      Alert.alert('Error', 'Contact number is required');
       return false;
     }
     if (!formData.country_id) {
-      Alert.alert('Error', 'Please select a country');
+      Alert.alert('Error', 'Country is required');
       return false;
+    }
+    
+    // Client specific validation
+    if (user?.type === 'client') {
+      if (!formData.company_name.trim()) {
+        Alert.alert('Error', 'Company name is required');
+        return false;
+      }
+      if (!formData.company_size.trim()) {
+        Alert.alert('Error', 'Company size is required');
+        return false;
+      }
+      if (!formData.city.trim()) {
+        Alert.alert('Error', 'City is required');
+        return false;
+      }
+      if (!formData.industry.trim()) {
+        Alert.alert('Error', 'Industry is required');
+        return false;
+      }
+      if (!formData.bio.trim()) {
+        Alert.alert('Error', 'Bio is required');
+        return false;
+      }
     }
     
     // Inspector specific validation
@@ -389,12 +447,72 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     if (!validateForm()) return;
 
-    // Prepare the data for API call
+    // For clients, always use FormData (even without avatar, per old PWA implementation)
+    if (user?.type === 'client') {
+      try {
+        const formDataObj = new FormData();
+        formDataObj.append('name', formData.name);
+        formDataObj.append('phone', formData.phone);
+        formDataObj.append('country_id', String(formData.country_id));
+        formDataObj.append('bio', formData.bio);
+        formDataObj.append('city', formData.city);
+        formDataObj.append('company_name', formData.company_name);
+        formDataObj.append('company_size', formData.company_size);
+        formDataObj.append('industry', formData.industry);
+        
+        // Append avatar file only if a new one was selected
+        if (avatarFile) {
+          formDataObj.append('avatar', {
+            uri: avatarFile.uri,
+            type: avatarFile.type,
+            name: avatarFile.name,
+          } as any);
+        }
+
+        const response = await apiClient.post('/edit-client-data', formDataObj);
+
+        if (response.data.success) {
+          await updateUser({
+            name: formData.name,
+            phone: formData.phone,
+            company_name: formData.company_name,
+            country_id: formData.country_id,
+            client_details: {
+              ...user?.client_details,
+              bio: formData.bio,
+              city: formData.city,
+              company_size: formData.company_size,
+              industry: formData.industry,
+              avatar: response.data?.user?.client_details?.avatar || user?.client_details?.avatar,
+            },
+          });
+
+          Alert.alert('Success', 'Profile updated successfully', [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.back();
+              }
+            }
+          ]);
+        } else {
+          Alert.alert('Error', response.data.message || 'Failed to update profile');
+        }
+      } catch (error: any) {
+        console.error('Update profile error:', error);
+        Alert.alert('Error', error?.response?.data?.message || 'Failed to update profile');
+      }
+      return;
+    }
+
+    // For inspectors or clients without avatar upload, use JSON
     const profileData = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
       company_name: formData.company_name,
+      company_size: formData.company_size,
+      industry: formData.industry,
       country_id: formData.country_id,
       date_of_birth: formData.date_of_birth,
       location: formData.location,
@@ -493,12 +611,31 @@ export default function EditProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           
-          {renderFormField('Full Name *', 'name', 'Enter your full name')}
-          {renderFormField('Email *', 'email', 'Enter your email', 'email-address')}
-          {renderFormField('Phone *', 'phone', 'Enter your phone number', 'phone-pad')}
-          {renderFormField('Company Name', 'company_name', 'Enter your company name')}
-          {renderFormField('Date of Birth', 'date_of_birth', 'Enter DOB', 'default')}
-          {renderFormField('Nationality', 'nationality', 'Enter Nationality', 'default')}
+          {renderFormField('User Name *', 'name', 'Enter user name')}
+          {renderFormField('Contact Number *', 'phone', 'Enter contact number', 'phone-pad')}
+          
+          {user?.type === 'client' && (
+            <>
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Email (Non-editable)</Text>
+                <TextInput
+                  style={[styles.textInput, styles.disabledInput]}
+                  value={formData.email}
+                  placeholder="Email"
+                  placeholderTextColor="#9CA3AF"
+                  editable={false}
+                />
+              </View>
+            </>
+          )}
+          
+          {user?.type === 'inspector' && (
+            <>
+              {renderFormField('Email *', 'email', 'Enter your email', 'email-address')}
+              {renderFormField('Date of Birth', 'date_of_birth', 'Enter DOB', 'default')}
+              {renderFormField('Nationality', 'nationality', 'Enter Nationality', 'default')}
+            </>
+          )}
           
           {/* Country Picker */}
           <View style={styles.fieldContainer}>
@@ -523,25 +660,49 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        {/* Address Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Address Information</Text>
-          
-          {renderFormField('Location', 'location', 'Enter location')}
-          {renderFormField('Address', 'address', 'Enter your address')}
-          {renderFormField('City', 'city', 'Enter your city')}
-          {renderFormField('State/Province', 'state', 'Enter your state')}
-          {renderFormField('Postal Code', 'postal_code', 'Enter your postal code')}
-        </View>
+        {/* Client Specific Fields */}
+        {user?.type === 'client' && (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Company Information</Text>
+              
+              {renderFormField('Company Name *', 'company_name', 'Company name')}
+              {renderFormField('Company Size *', 'company_size', 'Company size')}
+              {renderFormField('City *', 'city', 'Enter city')}
+              {renderFormField('Industry *', 'industry', 'Enter industry')}
+            </View>
 
-        {/* Professional Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Professional Information</Text>
-          
-          {renderFormField('Website', 'website', 'Enter your website URL', 'default')}
-          {renderFormField('LinkedIn', 'linkedin', 'Enter your LinkedIn profile', 'default')}
-          {renderFormField('Bio', 'bio', 'Tell us about yourself', 'default', true)}
-        </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>About</Text>
+              
+              {renderFormField('Bio *', 'bio', 'Enter bio', 'default', true)}
+            </View>
+          </>
+        )}
+
+        {/* Address Information - Inspector Only */}
+        {user?.type === 'inspector' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Address Information</Text>
+            
+            {renderFormField('Location', 'location', 'Enter location')}
+            {renderFormField('Address', 'address', 'Enter your address')}
+            {renderFormField('City', 'city', 'Enter your city')}
+            {renderFormField('State/Province', 'state', 'Enter your state')}
+            {renderFormField('Postal Code', 'postal_code', 'Enter your postal code')}
+          </View>
+        )}
+
+        {/* Professional Information - Inspector Only */}
+        {user?.type === 'inspector' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Professional Information</Text>
+            
+            {renderFormField('Website', 'website', 'Enter your website URL', 'default')}
+            {renderFormField('LinkedIn', 'linkedin', 'Enter your LinkedIn profile', 'default')}
+            {renderFormField('Bio', 'bio', 'Tell us about yourself', 'default', true)}
+          </View>
+        )}
 
         {/* Inspector Specific Fields */}
         {user?.type === 'inspector' && (
@@ -752,6 +913,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1E293B',
     backgroundColor: '#FFFFFF',
+  },
+  disabledInput: {
+    backgroundColor: '#F3F4F6',
+    color: '#9CA3AF',
   },
   multilineInput: {
     height: 80,

@@ -3,9 +3,9 @@ import { apiClient } from '../client';
 
 export function useRequestInspection() {
   return useMutation({
-    mutationFn: async (formData: FormData) => {
+    mutationFn: async (formData: any) => {
       const response = await apiClient.post('/request-new-inspection', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'application/json' },
       });
       return response.data;
     },
@@ -26,9 +26,8 @@ export function useEditInspection() {
 export function useUploadRfiFile() {
   return useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiClient.post('/upload-rfi-file', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // axios will automatically detect FormData and set Content-Type with boundary
+      const response = await apiClient.post('/upload-rfi-file', formData);
       return response.data;
     },
   });

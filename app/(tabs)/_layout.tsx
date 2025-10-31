@@ -1,14 +1,26 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { Redirect } from 'expo-router';
+import { Redirect, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import NotificationBadge from '../../src/components/NotificationBadge';
+import { hapticMedium } from '../../src/utils/haptics';
+import { useEffect, useRef } from 'react';
 
 export default function TabLayout() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
+  const previousPathname = useRef(pathname);
+
+  // Trigger haptic feedback when pathname changes (tab navigation) - fallback
+  useEffect(() => {
+    if (pathname && pathname !== previousPathname.current && pathname.startsWith('/(tabs)')) {
+      hapticMedium();
+      previousPathname.current = pathname;
+    }
+  }, [pathname]);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -36,6 +48,30 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
+        },
+        tabBarButton: (props) => {
+          const { children, onPress, accessibilityState, ...otherProps } = props;
+          
+          // Only trigger haptic if switching to a different tab
+          const isSelected = accessibilityState?.selected;
+          
+          return (
+            <Pressable
+              {...otherProps}
+              onPressIn={() => {
+                // Trigger haptic immediately on press down
+                if (!isSelected) {
+                  console.log('Tab pressed - triggering haptic');
+                  hapticMedium();
+                }
+              }}
+              onPress={(e) => {
+                onPress?.(e);
+              }}
+            >
+              {children}
+            </Pressable>
+          );
         },
       }}
     >
@@ -79,6 +115,20 @@ export default function TabLayout() {
             />
           ),
           href: user?.type === 'inspector' ? '/(tabs)/bids' : null,
+        }}
+      />
+      <Tabs.Screen
+        name="my-requests"
+        options={{
+          title: 'My Requests',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? 'list' : 'list-outline'} 
+              size={24} 
+              color={color} 
+            />
+          ),
+          href: user?.type === 'client' ? '/(tabs)/my-requests' : null,
         }}
       />
       <Tabs.Screen

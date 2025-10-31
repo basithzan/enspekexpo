@@ -12,6 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { HapticPressable } from '../src/components/HapticPressable';
+import { HapticType, hapticError } from '../src/utils/haptics';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -25,11 +27,13 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password.trim() || !phone.trim()) {
+      hapticError();
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (!type) {
+      hapticError();
       Alert.alert('Error', 'Invalid user type');
       return;
     }
@@ -99,24 +103,25 @@ export default function RegisterScreen() {
             autoCapitalize="none"
           />
 
-          <Pressable
+          <HapticPressable
             style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
             onPress={handleRegister}
             disabled={isLoading}
+            hapticType={HapticType.Medium}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.registerButtonText}>Create Account</Text>
             )}
-          </Pressable>
+          </HapticPressable>
         </View>
 
         {/* Back to Login */}
         <View style={styles.secondaryActions}>
-          <Pressable onPress={() => router.back()}>
+          <HapticPressable onPress={() => router.back()} hapticType={HapticType.Light}>
             <Text style={styles.linkText}>Already have an account? Sign in</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

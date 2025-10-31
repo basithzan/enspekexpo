@@ -496,6 +496,11 @@ const BidNow = ({ route }) => {
       return
     }
 
+    if (!fetchedLocation || !fetchedLocation.address) {
+      toast.info('Please fetch location first')
+      return
+    }
+
     let formData = new FormData();
     formData.append("token", inspector?.user.auth_token);
     formData.append("enquiry_log_id", params.id);
@@ -505,9 +510,17 @@ const BidNow = ({ route }) => {
     formData.append("latitude", fetchedLocation?.latitude);
     formData.append("longitude", fetchedLocation?.longitude);
 
-    formData.append("imageAndroid", checkInPhoto);
-    formData.append("image", capturedImage);
-    formData.append("note", checkInNote);
+    // Only append the image that exists
+    if (checkInPhoto) {
+      formData.append("imageAndroid", checkInPhoto);
+    }
+    if (capturedImage) {
+      formData.append("image", capturedImage);
+    }
+
+    if (checkInNote) {
+      formData.append("note", checkInNote);
+    }
 
     dispatch(saveCheckInEnquiry(formData)).then((result) => {
       setCheckInNote(null)
@@ -515,14 +528,15 @@ const BidNow = ({ route }) => {
       setIsLocationFetched(false)
       setCheckInPhoto(null)
       setCheckInPhotoPreview(null)
-      // dispatch(
-      //   viewSingleEnquiry({ token: inspector?.user.auth_token, id: params.id })
-      // );
-      toast.info('Checked In Successfully')
+      setCapturedImage(null)
+      dispatch(
+        viewSingleEnquiry({ token: inspector?.user.auth_token, id: params.id })
+      );
+      toast.success('Checked In Successfully')
 
     }).catch((err) => {
-
-    });;
+      toast.error(err?.response?.data?.message || 'Failed to check in. Please try again.')
+    });
   };
 
   const handleSubmit = (e) => {
@@ -657,15 +671,14 @@ const BidNow = ({ route }) => {
                     <strong className="font-bold text-black"> Current Location  : {fetchedLocation?.address}</strong>
                   </label>
                   <label className="block mb-2 text-sm font-medium text-gray-500 py-2">
-                    Enter Check In Note
+                    Enter Check In Note (Optional)
                   </label>
                   <input
-                    required
                     onChange={(e) => handleChangeCheckINNote(e)}
-                    // defaultValue={single_job?.enquiry?.master_logs[0]?.flash_note}
+                    value={checkInNote || ''}
                     type="text"
                     className={`w-full border ${"border-[#E2E8F0]"} rounded-lg px-3 py-3`}
-                    placeholder={"Enter Check In Note"}
+                    placeholder={"Enter Check In Note (Optional)"}
 
                   />
 
@@ -704,26 +717,36 @@ const BidNow = ({ route }) => {
                           />
                         </div>
                       )}
-                      <input
-                        required
-                        id="capture-image" accept="image/*" capture="environment"
-                        onChange={(e) => handleCheckInPhotoUpload(e)}
-                        type="file"
-                        className={`w-full border border-[#E2E8F0] rounded-lg px-3 py-3`}
-                      />
+                      <label htmlFor="capture-image" className="block w-full">
+                        <input
+                          id="capture-image" 
+                          accept="image/*" 
+                          capture="environment"
+                          onChange={(e) => handleCheckInPhotoUpload(e)}
+                          type="file"
+                          className="hidden"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => document.getElementById('capture-image').click()}
+                          className="mt-5 py-3 border-[#15416E] border w-full rounded-md text-[#15416E] font-semibold flex items-center justify-center gap-2"
+                        >
+                          <CameraIcon className="w-6 h-6" />
+                          {checkInphotoPreview ? 'Change Photo' : 'Take Photo'}
+                        </button>
+                      </label>
                     </div>
                   )}
                   {/* Image Preview */}
 
-                  {checkInNote && (capturedImage || checkInPhoto) &&
-
+                  {(capturedImage || checkInPhoto) && (
                     <button
                       type="submit"
                       className="mt-5 py-3 bg-[#15416E] w-full rounded-md text-white font-bold"
                     >
                       Submit Check In
                     </button>
-                  }
+                  )}
                 </div>
               </form>
       }

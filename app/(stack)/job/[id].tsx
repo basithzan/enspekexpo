@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   Modal,
   Linking,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,11 +19,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../../src/api/client';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import { useEnquiryCheckIn } from '../../../src/api/hooks/useEnquiry';
+import { useAuth } from '../../../src/contexts/AuthContext';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType, hapticSuccess, hapticError } from '../../../src/utils/haptics';
 
 export default function JobDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   console.log('JobDetailsScreen rendered with new map implementation');
   
@@ -42,6 +49,16 @@ export default function JobDetailsScreen() {
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [checkins, setCheckins] = useState<any[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Check-in modal states
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [checkInPhoto, setCheckInPhoto] = useState<string | null>(null);
+  const [checkInPhotoFile, setCheckInPhotoFile] = useState<any>(null);
+  const [checkInNote, setCheckInNote] = useState('');
+  const [fetchedLocation, setFetchedLocation] = useState<{ address?: string; latitude?: number; longitude?: number } | null>(null);
+  const [isLocationFetched, setIsLocationFetched] = useState(false);
+  
+  const checkInMutation = useEnquiryCheckIn();
 
   // Check if bid form is valid
   const isBidFormValid = React.useMemo(() => {
@@ -294,9 +311,9 @@ export default function JobDetailsScreen() {
           <Text style={styles.errorMessage}>
             {error?.message || 'Failed to fetch job details'}
           </Text>
-          <Pressable style={styles.retryButton} onPress={() => router.back()}>
+          <HapticPressable style={styles.retryButton} onPress={() => router.back()} hapticType={HapticType.Medium}>
             <Text style={styles.retryButtonText}>Go Back</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
       </SafeAreaView>
     );
@@ -393,9 +410,9 @@ export default function JobDetailsScreen() {
     }
   };
 
-  const handleCheckIn = async () => {
+  // Open check-in modal and fetch location
+  const handleCheckInPress = async () => {
     try {
-      if (isCheckingIn) return;
       setIsCheckingIn(true);
 
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -415,16 +432,104 @@ export default function JobDetailsScreen() {
         }
       } catch {}
 
-      const payload: any = {
+      setFetchedLocation({
+        address: addressText,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-        address: addressText,
-        note: 'Inspector check-in',
-      };
-      // Identifiers required by API
-      // enquiry_log_id is the route param id in legacy app
-      payload.enquiry_log_id = Number(id);
-      // Try multiple sources for master_log_id like legacy PWA: enquiry.master_logs[0].id
+      });
+      setIsLocationFetched(true);
+      setShowCheckInModal(true);
+    } catch (e: any) {
+      Alert.alert('Location Error', e?.message || 'Unable to fetch location.');
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
+
+  // Handle photo upload
+  const handleCheckInPhotoUpload = async () => {
+    try {
+      // Request camera permissions
+      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      if (cameraStatus !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permission is needed to take a check-in photo.');
+        return;
+      }
+
+      // Show action sheet for camera or gallery
+      Alert.alert(
+        'Select Photo',
+        'Choose an option',
+        [
+          {
+            text: 'Camera',
+            onPress: async () => {
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setCheckInPhoto(result.assets[0].uri);
+                setCheckInPhotoFile(result.assets[0]);
+              }
+            },
+          },
+          {
+            text: 'Gallery',
+            onPress: async () => {
+              const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (libraryStatus !== 'granted') {
+                Alert.alert('Permission Required', 'Photo library permission is needed.');
+                return;
+              }
+
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setCheckInPhoto(result.assets[0].uri);
+                setCheckInPhotoFile(result.assets[0]);
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  // Submit check-in with photo
+  const handleSubmitCheckIn = async () => {
+    try {
+      if (!checkInPhoto && !checkInPhotoFile) {
+        Alert.alert('Photo Required', 'Please add a check-in photo');
+        return;
+      }
+
+      if (!fetchedLocation || !fetchedLocation.address) {
+        Alert.alert('Location Required', 'Please fetch location first');
+        return;
+      }
+
+      setIsCheckingIn(true);
+
+      // Get auth token from context
+      const authToken = user?.auth_token;
+
+      // Get master_log_id
       const masterLogId = job?.enquiry?.master_logs?.[0]?.id
         || jobData?.enquiry?.master_logs?.[0]?.id
         || job?.master_logs?.[0]?.id
@@ -432,13 +537,57 @@ export default function JobDetailsScreen() {
         || jobData?.my_bid?.master_log_id
         || jobData?.data?.enquiry?.master_logs?.[0]?.id
         || jobData?.data?.master_logs?.[0]?.id;
-      if (masterLogId) payload.master_log_id = masterLogId;
 
-      await apiClient.post('/add-enquiry-check-in', payload);
-      Alert.alert('Checked in', 'Your location has been recorded successfully.');
+      // Create FormData
+      const formData = new FormData();
+      if (authToken) {
+        formData.append('token', authToken);
+      }
+      formData.append('enquiry_log_id', String(id));
+      if (masterLogId) {
+        formData.append('master_log_id', String(masterLogId));
+      }
+      formData.append('address', fetchedLocation.address);
+      formData.append('latitude', String(fetchedLocation.latitude));
+      formData.append('longitude', String(fetchedLocation.longitude));
+
+      if (checkInPhotoFile) {
+        // For React Native, FormData accepts file objects with uri, type, and name
+        // @ts-ignore - React Native FormData accepts objects with uri
+        formData.append('imageAndroid', {
+          uri: checkInPhotoFile.uri,
+          type: checkInPhotoFile.type || 'image/jpeg',
+          name: checkInPhotoFile.fileName || 'checkin.jpg',
+        });
+        // Also append as 'image' for compatibility with API
+        // @ts-ignore
+        formData.append('image', {
+          uri: checkInPhotoFile.uri,
+          type: checkInPhotoFile.type || 'image/jpeg',
+          name: checkInPhotoFile.fileName || 'checkin.jpg',
+        });
+      }
+
+      if (checkInNote) {
+        formData.append('note', checkInNote);
+      }
+
+      await checkInMutation.mutateAsync(formData);
+      
+      // Reset form
+      setCheckInNote('');
+      setFetchedLocation(null);
+      setIsLocationFetched(false);
+      setCheckInPhoto(null);
+      setCheckInPhotoFile(null);
+      setShowCheckInModal(false);
+
+      Alert.alert('Success', 'Checked in successfully');
       fetchCheckIns();
+      queryClient.invalidateQueries({ queryKey: ['job-details', id] });
     } catch (e: any) {
-      Alert.alert('Check-in failed', e?.response?.data?.message || 'Unable to complete check-in.');
+      console.error('Check-in error:', e);
+      Alert.alert('Check-in failed', e?.response?.data?.message || 'Unable to complete check-in. Please try again.');
     } finally {
       setIsCheckingIn(false);
     }
@@ -479,20 +628,21 @@ export default function JobDetailsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <HapticPressable style={styles.backButton} onPress={() => router.back()} hapticType={HapticType.Light}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
+        </HapticPressable>
         <Text style={styles.headerTitle}>Job Details</Text>
         <View style={styles.headerRight}>
           {hasUserBid && (String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
-            <Pressable
+            <HapticPressable
               style={styles.checkInButton}
-              onPress={handleCheckIn}
+              onPress={handleCheckInPress}
               disabled={isCheckingIn}
+              hapticType={HapticType.Medium}
             >
               <Ionicons name="log-in-outline" size={18} color="#065F46" />
               <Text style={styles.checkInButtonText}>{isCheckingIn ? 'Checking in…' : 'Check-in'}</Text>
-            </Pressable>
+            </HapticPressable>
           )}
         </View>
       </View>
@@ -607,12 +757,13 @@ export default function JobDetailsScreen() {
             </View>
             <View style={styles.mapContainer}>
               {(job?.latitude && job?.longitude) ? (
-                <Pressable 
+                <HapticPressable 
                   style={styles.mapWrapper}
                   onPress={() => {
                     const url = `https://maps.google.com/maps?q=${job.latitude},${job.longitude}`;
                     Linking.openURL(url);
                   }}
+                  hapticType={HapticType.Medium}
                 >
                   <View style={styles.mapPlaceholder}>
                     <Ionicons name="map-outline" size={48} color="#3B82F6" />
@@ -626,7 +777,7 @@ export default function JobDetailsScreen() {
                       </Text>
                     </View>
                   </View>
-                </Pressable>
+                </HapticPressable>
               ) : (
                 <View style={styles.mapPlaceholder}>
                   <Ionicons name="map-outline" size={48} color="#6B7280" />
@@ -638,16 +789,17 @@ export default function JobDetailsScreen() {
               )}
             </View>
             {(job?.latitude && job?.longitude) && (
-              <Pressable 
+              <HapticPressable 
                 style={styles.directionsButton}
                 onPress={() => {
                   const url = `https://maps.google.com/maps?daddr=${job.latitude},${job.longitude}`;
                   Linking.openURL(url);
                 }}
+                hapticType={HapticType.Medium}
               >
                 <Ionicons name="navigate-outline" size={16} color="#3B82F6" />
                 <Text style={styles.directionsButtonText}>Get Directions</Text>
-              </Pressable>
+              </HapticPressable>
             )}
           </View>
         </View>
@@ -682,13 +834,13 @@ export default function JobDetailsScreen() {
             return n;
           };
           return (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Estimated Inspection Date</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Estimated Inspection Date</Text>
               <View style={styles.dateChipWrap}>
                 {(dates.length ? dates : [String(raw)])?.map((d, i) => (
                   <View key={i} style={styles.dateChip}>
                     <Text style={styles.dateChipText}>{formatDate(normalize(String(d)))}</Text>
-                  </View>
+          </View>
                 ))}
               </View>
             </View>
@@ -757,10 +909,10 @@ export default function JobDetailsScreen() {
                         <Text style={styles.documentMetaLabel}>Upload Date:</Text>
                         <Text style={styles.documentMetaValue}>{uploaded || 'N/A'}</Text>
                       </View>
-                      <Pressable style={styles.downloadButton} onPress={() => Linking.openURL(finalUrl)}>
+                      <HapticPressable style={styles.downloadButton} onPress={() => Linking.openURL(finalUrl)} hapticType={HapticType.Light}>
                         <Ionicons name="download-outline" size={16} color="#FFFFFF" />
                         <Text style={styles.downloadButtonText}>Download</Text>
-                      </Pressable>
+                      </HapticPressable>
                     </View>
                   );
                 })
@@ -780,12 +932,12 @@ export default function JobDetailsScreen() {
           <View style={styles.section}>
             <View style={styles.videoHeader}>
               <Text style={styles.sectionTitle}>Video Conferencing</Text>
-              <Pressable style={styles.refreshButton} onPress={fetchVideoInfo} disabled={videoLoading}>
+              <HapticPressable style={styles.refreshButton} onPress={fetchVideoInfo} disabled={videoLoading} hapticType={HapticType.Light}>
                 <Text style={styles.refreshText}>Refresh</Text>
-              </Pressable>
+              </HapticPressable>
             </View>
             <View style={{ gap: 12 }}>
-              <Pressable
+              <HapticPressable
                 style={styles.videoButton}
                 onPress={async () => {
                   try {
@@ -796,10 +948,11 @@ export default function JobDetailsScreen() {
                     Alert.alert('Video call', e?.response?.data?.message || 'Failed to load meeting');
                   }
                 }}
+                hapticType={HapticType.Medium}
               >
                 <Ionicons name="videocam-outline" size={18} color="#1D4ED8" />
                 <Text style={styles.videoButtonText}>Open Video Call</Text>
-              </Pressable>
+              </HapticPressable>
               {!videoInfo.agora && !videoLoading && (
                 <View style={styles.videoEmpty}>
                   <Ionicons name="videocam-off-outline" size={48} color="#9CA3AF" />
@@ -816,9 +969,9 @@ export default function JobDetailsScreen() {
         <View style={styles.section}>
           <View style={styles.videoHeader}>
             <Text style={styles.sectionTitle}>Check-ins</Text>
-            <Pressable style={styles.refreshButton} onPress={fetchCheckIns} disabled={checkinsLoading}>
+            <HapticPressable style={styles.refreshButton} onPress={fetchCheckIns} disabled={checkinsLoading} hapticType={HapticType.Light}>
               <Text style={styles.refreshText}>Refresh</Text>
-            </Pressable>
+            </HapticPressable>
           </View>
           {checkinsLoading ? (
             <View style={styles.videoEmpty}><ActivityIndicator /></View>
@@ -876,13 +1029,14 @@ export default function JobDetailsScreen() {
                 keyboardType="numeric"
                 placeholderTextColor="#9CA3AF"
               />
-              <Pressable 
+              <HapticPressable 
                 style={styles.currencySelector}
                 onPress={() => setShowCurrencyModal(true)}
+                hapticType={HapticType.Light}
               >
                 <Text style={styles.currencyText}>{bidCurrency}</Text>
                 <Ionicons name="chevron-down" size={16} color="#6B7280" />
-              </Pressable>
+              </HapticPressable>
             </View>
           </View>
 
@@ -890,9 +1044,10 @@ export default function JobDetailsScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Amount Type</Text>
                 <View style={styles.amountTypeContainer}>
-                  <Pressable
+                  <HapticPressable
                     style={[styles.amountTypeButton, bidAmountType === 'daily' && styles.amountTypeButtonActive]}
                     onPress={() => setBidAmountType('daily')}
+                    hapticType={HapticType.Selection}
                   >
                     <Text style={[
                       styles.amountTypeText, 
@@ -900,10 +1055,11 @@ export default function JobDetailsScreen() {
                     ]}>
                       Daily
                     </Text>
-                  </Pressable>
-                  <Pressable
+                  </HapticPressable>
+                  <HapticPressable
                     style={[styles.amountTypeButton, bidAmountType === 'hourly' && styles.amountTypeButtonActive]}
                     onPress={() => setBidAmountType('hourly')}
+                    hapticType={HapticType.Selection}
                   >
                     <Text style={[
                       styles.amountTypeText, 
@@ -911,10 +1067,11 @@ export default function JobDetailsScreen() {
                     ]}>
                       Hourly
                     </Text>
-                  </Pressable>
-                  <Pressable
+                  </HapticPressable>
+                  <HapticPressable
                     style={[styles.amountTypeButton, bidAmountType === 'monthly' && styles.amountTypeButtonActive]}
                     onPress={() => setBidAmountType('monthly')}
+                    hapticType={HapticType.Selection}
                   >
                     <Text style={[
                       styles.amountTypeText, 
@@ -922,10 +1079,11 @@ export default function JobDetailsScreen() {
                     ]}>
                       Monthly
                     </Text>
-                  </Pressable>
-                  <Pressable
+                  </HapticPressable>
+                  <HapticPressable
                     style={[styles.amountTypeButton, bidAmountType === 'project' && styles.amountTypeButtonActive]}
                     onPress={() => setBidAmountType('project')}
+                    hapticType={HapticType.Selection}
                   >
                     <Text style={[
                       styles.amountTypeText, 
@@ -933,7 +1091,7 @@ export default function JobDetailsScreen() {
                     ]}>
                       For Project
                     </Text>
-                  </Pressable>
+                  </HapticPressable>
                 </View>
               </View>
 
@@ -945,9 +1103,10 @@ export default function JobDetailsScreen() {
             </Text>
             
             {/* Date Picker Button */}
-            <Pressable
+            <HapticPressable
               style={styles.datePickerButton}
               onPress={openDatePicker}
+              hapticType={HapticType.Medium}
             >
               <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
               <Text style={styles.datePickerButtonText}>
@@ -957,7 +1116,7 @@ export default function JobDetailsScreen() {
                 }
               </Text>
               <Ionicons name="chevron-down" size={16} color="#6B7280" />
-            </Pressable>
+            </HapticPressable>
 
             {/* Selected Dates Display */}
             {selectedDates.length > 0 && (
@@ -972,12 +1131,13 @@ export default function JobDetailsScreen() {
                         year: 'numeric'
                       })}
                     </Text>
-                    <Pressable
+                    <HapticPressable
                       style={styles.removeDateButton}
                       onPress={() => removeDate(date)}
+                      hapticType={HapticType.Light}
                     >
                       <Ionicons name="close" size={16} color="#EF4444" />
-                    </Pressable>
+                    </HapticPressable>
                   </View>
                 ))}
               </View>
@@ -998,6 +1158,11 @@ export default function JobDetailsScreen() {
                 <Ionicons name="checkmark-circle-outline" size={20} color="#059669" />
                 <Text style={[styles.footerStatusText, { color: '#065F46' }]}>Your bid has been approved</Text>
               </>
+            ) : (String(userBidStatus).toLowerCase() === 'rejected' || String(userBidStatus) === '3') ? (
+              <>
+                <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
+                <Text style={[styles.footerStatusText, { color: '#DC2626' }]}>Your bid has been rejected</Text>
+              </>
             ) : (
               <>
                 <Ionicons name="time-outline" size={20} color="#F59E0B" />
@@ -1011,13 +1176,14 @@ export default function JobDetailsScreen() {
       {/* Sticky Submit Bid Button - Only show if user hasn't bid yet */}
       {!hasUserBid && (
       <View style={styles.stickyButtonContainer}>
-        <Pressable
+        <HapticPressable
           style={[
             styles.submitButton, 
             (isSubmittingBid || hasUserBid) && styles.submitButtonDisabled
           ]}
           onPress={hasUserBid ? undefined : handleSubmitBid}
           disabled={isSubmittingBid || hasUserBid}
+          hapticType={HapticType.Medium}
         >
           {isSubmittingBid ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -1026,11 +1192,11 @@ export default function JobDetailsScreen() {
               Already Bid
             </Text>
           ) : (
-            <Text style={styles.submitButtonText}>
+              <Text style={styles.submitButtonText}>
               Bid Now
             </Text>
           )}
-        </Pressable>
+        </HapticPressable>
       </View>
       )}
 
@@ -1045,13 +1211,13 @@ export default function JobDetailsScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Currency</Text>
-              <Pressable onPress={() => setShowCurrencyModal(false)}>
+              <HapticPressable onPress={() => setShowCurrencyModal(false)} hapticType={HapticType.Light}>
                 <Ionicons name="close" size={24} color="#6B7280" />
-              </Pressable>
+              </HapticPressable>
             </View>
             <ScrollView style={styles.currencyList}>
               {currencies.map((currency) => (
-                <Pressable
+                <HapticPressable
                   key={currency.code}
                   style={[
                     styles.currencyItem,
@@ -1061,6 +1227,7 @@ export default function JobDetailsScreen() {
                     setBidCurrency(currency.code);
                     setShowCurrencyModal(false);
                   }}
+                  hapticType={HapticType.Selection}
                 >
                   <View style={styles.currencyInfo}>
                     <Text style={styles.currencyCode}>{currency.code}</Text>
@@ -1070,11 +1237,102 @@ export default function JobDetailsScreen() {
                     {bidCurrency === currency.code && (
                       <Ionicons name="checkmark" size={20} color="#10B981" />
                     )}
-                </Pressable>
+                </HapticPressable>
               ))}
             </ScrollView>
           </View>
         </View>
+          </Modal>
+
+          {/* Check-in Modal */}
+          <Modal
+            visible={showCheckInModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowCheckInModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.checkInModalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Check In Details</Text>
+                  <HapticPressable onPress={() => setShowCheckInModal(false)} hapticType={HapticType.Light}>
+                    <Ionicons name="close" size={24} color="#6B7280" />
+                  </HapticPressable>
+                </View>
+
+                <ScrollView style={styles.checkInModalScroll} showsVerticalScrollIndicator={false}>
+                  {/* Location Display */}
+                  {isLocationFetched && fetchedLocation?.address && (
+                    <View style={styles.checkInSection}>
+                      <Text style={styles.checkInLabel}>Current Location:</Text>
+                      <Text style={styles.checkInLocationText}>{fetchedLocation.address}</Text>
+                    </View>
+                  )}
+
+                  {/* Check-in Note */}
+                  <View style={styles.checkInSection}>
+                    <Text style={styles.checkInLabel}>Enter Check In Note (Optional)</Text>
+                    <TextInput
+                      style={styles.checkInNoteInput}
+                      value={checkInNote}
+                      onChangeText={setCheckInNote}
+                      placeholder="Enter Check In Note (Optional)"
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+
+                  {/* Photo Upload */}
+                  <View style={styles.checkInSection}>
+                    <Text style={styles.checkInLabel}>Upload Check In Photo</Text>
+                    
+                    {checkInPhoto && (
+                      <View style={styles.photoPreviewContainer}>
+                        <Image source={{ uri: checkInPhoto }} style={styles.photoPreview} />
+                        <HapticPressable
+                          style={styles.removePhotoButton}
+                          onPress={() => {
+                            setCheckInPhoto(null);
+                            setCheckInPhotoFile(null);
+                          }}
+                          hapticType={HapticType.Light}
+                        >
+                          <Ionicons name="close-circle" size={24} color="#EF4444" />
+                        </HapticPressable>
+                      </View>
+                    )}
+
+                    <HapticPressable
+                      style={styles.uploadPhotoButton}
+                      onPress={handleCheckInPhotoUpload}
+                      hapticType={HapticType.Medium}
+                    >
+                      <Ionicons name="camera-outline" size={24} color="#15416E" />
+                      <Text style={styles.uploadPhotoButtonText}>
+                        {checkInPhoto ? 'Change Photo' : 'Take Photo'}
+                      </Text>
+                    </HapticPressable>
+                  </View>
+
+                  {/* Submit Button - Only show when photo is uploaded */}
+                  {(checkInPhoto || checkInPhotoFile) && (
+                    <HapticPressable
+                      style={[styles.submitCheckInButton, isCheckingIn && styles.submitCheckInButtonDisabled]}
+                      onPress={handleSubmitCheckIn}
+                      disabled={isCheckingIn}
+                      hapticType={HapticType.Medium}
+                    >
+                      {isCheckingIn ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.submitCheckInButtonText}>Submit Check In</Text>
+                      )}
+                    </HapticPressable>
+                  )}
+                </ScrollView>
+              </View>
+            </View>
           </Modal>
 
           {/* Calendar Modal */}
@@ -1089,24 +1347,25 @@ export default function JobDetailsScreen() {
                 <View style={styles.calendarModalContent}>
                   <View style={styles.calendarHeader}>
                     <Text style={styles.calendarTitle}>Select Available Dates</Text>
-                    <Pressable onPress={() => setShowDatePicker(false)}>
+                    <HapticPressable onPress={() => setShowDatePicker(false)} hapticType={HapticType.Light}>
                       <Ionicons name="close" size={24} color="#6B7280" />
-                    </Pressable>
+                    </HapticPressable>
                   </View>
                   
                   <View style={styles.calendarContainer}>
                     {/* Month Navigation */}
                     <View style={styles.monthNavigation}>
-                      <Pressable
-                        style={styles.monthNavButton}
-                        onPress={() => {
-                          const newMonth = new Date(currentMonth);
-                          newMonth.setMonth(newMonth.getMonth() - 1);
-                          setCurrentMonth(newMonth);
-                        }}
-                      >
-                        <Ionicons name="chevron-back" size={20} color="#3B82F6" />
-                      </Pressable>
+                    <HapticPressable
+                      style={styles.monthNavButton}
+                      onPress={() => {
+                        const newMonth = new Date(currentMonth);
+                        newMonth.setMonth(newMonth.getMonth() - 1);
+                        setCurrentMonth(newMonth);
+                      }}
+                      hapticType={HapticType.Light}
+                    >
+                      <Ionicons name="chevron-back" size={20} color="#3B82F6" />
+                    </HapticPressable>
                       
                       <Text style={styles.monthYearText}>
                         {currentMonth.toLocaleDateString('en-US', { 
@@ -1115,16 +1374,17 @@ export default function JobDetailsScreen() {
                         })}
                       </Text>
                       
-                      <Pressable
+                      <HapticPressable
                         style={styles.monthNavButton}
                         onPress={() => {
                           const newMonth = new Date(currentMonth);
                           newMonth.setMonth(newMonth.getMonth() + 1);
                           setCurrentMonth(newMonth);
                         }}
+                        hapticType={HapticType.Light}
                       >
                         <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
-                      </Pressable>
+                      </HapticPressable>
                     </View>
                     
                     {/* Calendar Grid */}
@@ -1139,7 +1399,7 @@ export default function JobDetailsScreen() {
                       {/* Calendar Days */}
                       <View style={styles.calendarDays}>
                         {getDaysInMonth(currentMonth).map((date, index) => (
-                          <Pressable
+                          <HapticPressable
                             key={index}
                             style={[
                               styles.calendarDay,
@@ -1148,6 +1408,7 @@ export default function JobDetailsScreen() {
                             ]}
                             onPress={() => date && date >= new Date() && toggleDateSelection(date)}
                             disabled={!date || date < new Date()}
+                            hapticType={HapticType.Selection}
                           >
                             {date && (
                               <Text style={[
@@ -1158,7 +1419,7 @@ export default function JobDetailsScreen() {
                                 {date.getDate()}
                               </Text>
                             )}
-                          </Pressable>
+                          </HapticPressable>
                         ))}
                       </View>
                     </View>
@@ -2127,5 +2388,92 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#92400E',
     textAlign: 'center',
+  },
+  checkInModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    paddingBottom: 20,
+  },
+  checkInModalScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  checkInSection: {
+    marginBottom: 20,
+  },
+  checkInLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  checkInLocationText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 4,
+  },
+  checkInNoteInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F2937',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  photoPreviewContainer: {
+    position: 'relative',
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  photoPreview: {
+    width: 128,
+    height: 128,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+  },
+  uploadPhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#15416E',
+    borderRadius: 8,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  uploadPhotoButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#15416E',
+  },
+  submitCheckInButton: {
+    backgroundColor: '#15416E',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  submitCheckInButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  submitCheckInButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });

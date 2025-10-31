@@ -4,11 +4,9 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  Pressable, 
   RefreshControl,
   Alert,
-  ActivityIndicator,
-  TouchableOpacity
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +18,8 @@ import {
   useDeleteNotification,
   useClearAllNotifications 
 } from '../../../src/api/hooks/useNotifications';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType } from '../../../src/utils/haptics';
 
 interface Notification {
   id: number;
@@ -167,13 +167,14 @@ export default function NotificationsScreen() {
   };
 
   const renderNotification = (notification: Notification) => (
-    <Pressable
+    <HapticPressable
       key={notification.id}
       style={[
         styles.notificationItem,
         !notification.is_read && styles.unreadNotification
       ]}
       onPress={() => handleMarkAsRead(notification.id)}
+      hapticType={HapticType.Light}
     >
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
@@ -195,12 +196,13 @@ export default function NotificationsScreen() {
               {notification.message}
             </Text>
           </View>
-          <TouchableOpacity
+          <HapticPressable
             style={styles.deleteButton}
             onPress={() => handleDeleteNotification(notification.id)}
+            hapticType={HapticType.Light}
           >
             <Ionicons name="close" size={16} color="#6B7280" />
-          </TouchableOpacity>
+          </HapticPressable>
         </View>
         <View style={styles.notificationFooter}>
           <Text style={styles.notificationTime}>
@@ -209,7 +211,7 @@ export default function NotificationsScreen() {
           {!notification.is_read && <View style={styles.unreadDot} />}
         </View>
       </View>
-    </Pressable>
+    </HapticPressable>
   );
 
   if (isLoading) {
@@ -240,9 +242,9 @@ export default function NotificationsScreen() {
           <Text style={styles.errorMessage}>
             Please check your internet connection and try again.
           </Text>
-          <Pressable style={styles.retryButton} onPress={() => refetch()}>
+          <HapticPressable style={styles.retryButton} onPress={() => refetch()} hapticType={HapticType.Medium}>
             <Text style={styles.retryButtonText}>Try Again</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
       </SafeAreaView>
     );
@@ -263,22 +265,24 @@ export default function NotificationsScreen() {
         
         {notifications.length > 0 && (
           <View style={styles.headerActions}>
-            <Pressable 
+            <HapticPressable 
               style={styles.actionButton}
               onPress={handleMarkAllAsRead}
               disabled={markAllAsReadMutation.isPending}
+              hapticType={HapticType.Medium}
             >
               <Ionicons name="checkmark-done" size={16} color="#3B82F6" />
               <Text style={styles.actionButtonText}>Mark All Read</Text>
-            </Pressable>
-            <Pressable 
+            </HapticPressable>
+            <HapticPressable 
               style={styles.actionButton}
               onPress={handleClearAll}
               disabled={clearAllMutation.isPending}
+              hapticType={HapticType.Warning}
             >
               <Ionicons name="trash-outline" size={16} color="#EF4444" />
               <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Clear All</Text>
-            </Pressable>
+            </HapticPressable>
           </View>
         )}
       </View>

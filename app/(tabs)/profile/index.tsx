@@ -22,12 +22,176 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType } from '../../../src/utils/haptics';
 
 const { width } = Dimensions.get('window');
+const API_BASE_URL = 'https://erpbeta.enspek.com';
+
+// Client Profile Component
+function ClientProfileScreen() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+
+  const getAvatarUrl = () => {
+    const avatar = user?.client_details?.avatar || user?.avatar;
+    if (!avatar) return null;
+    if (avatar.startsWith('http')) return avatar;
+    return `${API_BASE_URL}/${avatar}`;
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            router.replace('/role-selection');
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Profile</Text>
+        <View style={styles.headerRight} />
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Profile Hero Section */}
+        <View style={styles.clientHeroSection}>
+          <View style={styles.clientProfileCard}>
+            <View style={styles.clientAvatarContainer}>
+              {getAvatarUrl() ? (
+                <Image
+                  source={{ uri: getAvatarUrl() }}
+                  style={styles.clientAvatar}
+                  onError={() => {}}
+                />
+              ) : (
+                <View style={styles.clientAvatarPlaceholder}>
+                  <Text style={styles.clientAvatarText}>
+                    {user?.name?.charAt(0)?.toUpperCase() || 'C'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.clientUserInfo}>
+              <Text style={styles.clientUserName}>
+                {user?.name || user?.client_details?.name || 'Client'}
+              </Text>
+              <Text style={styles.clientUserEmail}>
+                {user?.email || user?.client_details?.email || ''}
+              </Text>
+            </View>
+
+            <HapticPressable
+              style={styles.clientEditButton}
+              onPress={() => router.push('/(modals)/edit-profile')}
+              hapticType={HapticType.Medium}
+            >
+              <Ionicons name="create-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.clientEditButtonText}>Edit Profile</Text>
+            </HapticPressable>
+          </View>
+        </View>
+
+        {/* About Me Section */}
+        {user?.client_details?.bio && (
+          <View style={styles.aboutMeSection}>
+            <View style={styles.aboutMeHeader}>
+              <Text style={styles.aboutMeTitle}>About Me</Text>
+            </View>
+            <Text style={styles.aboutMeText}>
+              {user.client_details.bio}
+            </Text>
+          </View>
+        )}
+
+        {/* Logout Section */}
+        <View style={styles.logoutAccountSection}>
+          <HapticPressable
+            style={styles.logoutAccountButton}
+            onPress={handleLogout}
+            hapticType={HapticType.Warning}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Text style={styles.logoutAccountText}>Logout</Text>
+          </HapticPressable>
+        </View>
+
+        {/* Delete Account Section */}
+        <View style={styles.deleteAccountSection}>
+          <HapticPressable
+            style={styles.deleteAccountButton}
+            onPress={() => setIsDeleteModalVisible(true)}
+            hapticType={HapticType.Warning}
+          >
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Text style={styles.deleteAccountText}>Delete My Account</Text>
+          </HapticPressable>
+        </View>
+      </ScrollView>
+
+      {/* Delete Account Modal */}
+      <Modal
+        visible={isDeleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContent}>
+            <Text style={styles.deleteModalTitle}>Delete Account</Text>
+            <Text style={styles.deleteModalText}>
+              To delete your account, please mail your registered email ID and phone number to our
+              support team at:
+            </Text>
+            <Text style={styles.deleteModalEmail}>info@enspek.com</Text>
+            <Text style={styles.deleteModalText}>
+              Once we receive your email, your data and account will be deleted within 15 days.
+            </Text>
+            <HapticPressable
+              style={styles.deleteModalCloseButton}
+              onPress={() => setIsDeleteModalVisible(false)}
+              hapticType={HapticType.Light}
+            >
+              <Text style={styles.deleteModalCloseText}>Close</Text>
+            </HapticPressable>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  
+  // Render client profile if user is client
+  if (user?.type === 'client') {
+    return <ClientProfileScreen />;
+  }
+  
+  // Inspector profile (existing code)
   const [isOnline, setIsOnline] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [cvFile, setCvFile] = useState(null);
@@ -279,11 +443,6 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
             </View>
           </Pressable>
-        </View>
-
-        {/* App Version */}
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>Enspek Expo v1.0.0</Text>
         </View>
       </ScrollView>
 
@@ -960,5 +1119,180 @@ const styles = StyleSheet.create({
   entryTextArea: {
     minHeight: 60,
     textAlignVertical: 'top',
+  },
+  // Client Profile Styles
+  clientHeroSection: {
+    padding: 20,
+    paddingTop: 20,
+  },
+  clientProfileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  clientAvatarContainer: {
+    marginBottom: 16,
+  },
+  clientAvatar: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: 6,
+    borderColor: '#FFFFFF',
+  },
+  clientAvatarPlaceholder: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 6,
+    borderColor: '#FFFFFF',
+  },
+  clientAvatarText: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  clientUserInfo: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  clientUserName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+    textTransform: 'capitalize',
+  },
+  clientUserEmail: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  clientEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#004E96',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  clientEditButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  aboutMeSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  aboutMeHeader: {
+    marginBottom: 12,
+  },
+  aboutMeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  aboutMeText: {
+    fontSize: 14,
+    color: '#78828A',
+    lineHeight: 20,
+  },
+  headerRight: {
+    width: 40,
+  },
+  logoutAccountSection: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  logoutAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logoutAccountText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  deleteAccountSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECF1F6',
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteAccountText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  deleteModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  deleteModalText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  deleteModalEmail: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+    marginBottom: 12,
+  },
+  deleteModalCloseButton: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  deleteModalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

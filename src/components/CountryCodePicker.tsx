@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ export default function CountryCodePicker({ selectedCountry, onCountrySelect }: 
   const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const autoSelectedRef = useRef(false);
 
   useEffect(() => {
     fetchCountries();
@@ -43,6 +44,61 @@ export default function CountryCodePicker({ selectedCountry, onCountrySelect }: 
       setFilteredCountries(countries);
     }
   }, [searchQuery, countries]);
+
+  // Auto-select country based on device locale
+  useEffect(() => {
+    if (countries.length > 0 && !selectedCountry && !autoSelectedRef.current) {
+      try {
+        autoSelectedRef.current = true; // Mark as attempted to prevent re-running
+        
+        let deviceRegion: string | null = null;
+        
+        // Try to get region from Intl API (available in React Native)
+        try {
+          const resolvedOptions = Intl.DateTimeFormat().resolvedOptions();
+          const locale = resolvedOptions.locale || resolvedOptions.timeZone;
+          
+          if (locale) {
+            // Parse locale string (e.g., 'en-US', 'en_IN', 'en-US-u-ca-gregory')
+            // Locale format: language-region or language_region
+            const parts = locale.split(/[-_]/);
+            if (parts.length > 1) {
+              // Take the region part (usually the second part)
+              deviceRegion = parts[1]?.split('.')[0]?.split('@')[0] || null;
+            } else if (parts.length === 1 && parts[0].length === 2) {
+              // Sometimes just the country code is provided
+              deviceRegion = parts[0];
+            }
+          }
+        } catch (e) {
+          console.warn('Could not get locale from Intl:', e);
+        }
+        
+        if (deviceRegion) {
+          // Clean and uppercase the country code
+          deviceRegion = deviceRegion.toUpperCase().trim();
+          
+          // Try to find country by code (uppercase)
+          const countryByCode = countries.find(
+            country => country.code && country.code.toUpperCase() === deviceRegion
+          );
+          
+          if (countryByCode) {
+            onCountrySelect(countryByCode);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to auto-select country based on locale:', error);
+        autoSelectedRef.current = false; // Reset on error so we can try again
+      }
+    }
+    
+    // Reset ref if selectedCountry changes (user manually selected)
+    if (selectedCountry) {
+      autoSelectedRef.current = false;
+    }
+  }, [countries, selectedCountry]);
 
   const fetchCountries = async () => {
     try {
@@ -175,14 +231,18 @@ const styles = StyleSheet.create({
   pickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 16,
-    marginRight: 8,
-    minWidth: 80,
+    minWidth: 85,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   selectedCode: {
     fontSize: 16,

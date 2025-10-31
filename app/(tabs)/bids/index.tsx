@@ -7,6 +7,8 @@ import { useRouter } from 'expo-router';
 import { useMyBids } from '../../../src/api/hooks/useInspector';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { Redirect } from 'expo-router';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType } from '../../../src/utils/haptics';
 
 export default function BidsScreen() {
   const router = useRouter();
@@ -195,9 +197,9 @@ export default function BidsScreen() {
           <Text style={styles.errorDescription}>
             There was an error loading your bids. Please try again.
           </Text>
-          <Pressable style={styles.retryButton} onPress={() => refetch()}>
+          <HapticPressable style={styles.retryButton} onPress={() => refetch()} hapticType={HapticType.Medium}>
             <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
+          </HapticPressable>
         </View>
       </SafeAreaView>
     );
@@ -243,12 +245,13 @@ export default function BidsScreen() {
             <Text style={styles.emptyDescription}>
               Start bidding on jobs to see your submissions here.
             </Text>
-            <Pressable 
+            <HapticPressable 
               style={styles.browseButton}
               onPress={() => router.push('/(tabs)/inspector')}
+              hapticType={HapticType.Medium}
             >
               <Text style={styles.browseButtonText}>Browse Jobs</Text>
-            </Pressable>
+            </HapticPressable>
           </View>
         </ScrollView>
       )}
@@ -274,7 +277,7 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
   };
 
   return (
-    <Pressable style={styles.bidCard} onPress={onPress}>
+    <HapticPressable style={styles.bidCard} onPress={onPress} hapticType={HapticType.Light}>
       <View style={styles.bidHeader}>
         <View style={styles.bidTitleContainer}>
           <Text style={styles.bidTitle}>
@@ -374,7 +377,7 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
         </Text>
         <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
       </View>
-    </Pressable>
+    </HapticPressable>
   );
 }
 

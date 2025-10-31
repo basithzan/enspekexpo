@@ -8,6 +8,8 @@ import { useNearbyJobs, useMyBids, useInspectorStats } from '../../../src/api/ho
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../../src/api/client';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType } from '../../../src/utils/haptics';
 
 export default function InspectorHome(){
   const router = useRouter();
@@ -344,12 +346,13 @@ export default function InspectorHome(){
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Nearby jobs</Text>
             <View style={styles.sectionActions}>
-              <Pressable 
+              <HapticPressable 
                 style={styles.filterButton}
                 onPress={()=>router.push('/(modals)/filters')}
+                hapticType={HapticType.Light}
               >
                 <Text style={styles.filterButtonText}>Filters</Text>
-              </Pressable>
+              </HapticPressable>
             </View>
           </View>
           {isLoading ? <SkeletonList /> : (
@@ -393,20 +396,6 @@ export default function InspectorHome(){
             )
           )}
         </View>
-
-        {/* Continue Work */}
-        <View style={styles.continueCard}>
-          <Text style={styles.continueTitle}>Continue where you left off</Text>
-          <Text style={styles.continueDescription}>Check-in on-site, upload photos, and submit your flash/final reports.</Text>
-          <View style={styles.continueButtons}>
-            <Pressable onPress={()=>router.push('/(tabs)/inspector/nearby')} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Open jobs</Text>
-            </Pressable>
-            <Pressable onPress={()=>router.push('/(modals)/upload')} style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Upload report</Text>
-            </Pressable>
-          </View>
-        </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -444,7 +433,9 @@ function SectionHeader({ title, actionLabel, onAction }:{ title:string; actionLa
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {actionLabel ? (
-        <Pressable onPress={onAction}><Text style={styles.actionText}>{actionLabel}</Text></Pressable>
+        <HapticPressable onPress={onAction} hapticType={HapticType.Light}>
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </HapticPressable>
       ) : null}
     </View>
   );
@@ -476,7 +467,7 @@ function JobCard({ item, onPress }:{ item:any; onPress:()=>void }){
   }, [item]);
   
   return (
-    <Pressable onPress={onPress} style={styles.jobCard}>
+    <HapticPressable onPress={onPress} style={styles.jobCard} hapticType={HapticType.Light}>
       {isNewJob && (
         <View style={styles.newLabel}>
           <Text style={styles.newLabelText}>NEW</Text>
@@ -516,7 +507,7 @@ function JobCard({ item, onPress }:{ item:any; onPress:()=>void }){
           <Text style={styles.jobId}>RFI{String(item?.id ?? '')}</Text>
         </View>
       </View>
-    </Pressable>
+    </HapticPressable>
   );
 }
 
@@ -653,7 +644,7 @@ function BidCard({ item, onPress }:{ item:any; onPress:()=>void }){
   });
 
   return (
-    <Pressable onPress={onPress} style={styles.bidCard}>
+    <HapticPressable onPress={onPress} style={styles.bidCard} hapticType={HapticType.Light}>
       <View style={styles.bidHeader}>
         <Text style={styles.bidTitle}>{item?.enquiry?.job_title || item?.job_title || item?.title || 'Bid on Job'}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusBadgeColor(item?.status) + '20' }]}>
@@ -733,7 +724,7 @@ function BidCard({ item, onPress }:{ item:any; onPress:()=>void }){
           <Text style={styles.bidId}>RFI{String(item?.id ?? '')}</Text>
         </View>
       </View>
-    </Pressable>
+    </HapticPressable>
   );
 }
 
@@ -742,9 +733,9 @@ function NoBidsState({ onPrimary, primaryText }:{ onPrimary:()=>void; primaryTex
     <View style={styles.noBidsState}>
       <Text style={styles.noBidsTitle}>No recent bids by you</Text>
       <Text style={styles.noBidsDescription}>You haven't submitted any bids recently. Start bidding on jobs to see them here.</Text>
-      <Pressable onPress={onPrimary} style={styles.noBidsButton}>
+      <HapticPressable onPress={onPrimary} style={styles.noBidsButton} hapticType={HapticType.Medium}>
         <Text style={styles.noBidsButtonText}>{primaryText}</Text>
-      </Pressable>
+      </HapticPressable>
     </View>
   );
 }
@@ -766,7 +757,9 @@ function ZeroState({ onPrimary, primaryText='Find jobs' }:{ onPrimary:()=>void; 
     <View style={styles.zeroState}>
       <Text style={styles.zeroStateTitle}>No nearby jobs</Text>
       <Text style={styles.zeroStateDescription}>Adjust filters or expand your distance to discover more opportunities.</Text>
-      <Pressable onPress={onPrimary} style={styles.primaryButton}><Text style={styles.primaryButtonText}>{primaryText}</Text></Pressable>
+      <HapticPressable onPress={onPrimary} style={styles.primaryButton} hapticType={HapticType.Medium}>
+        <Text style={styles.primaryButtonText}>{primaryText}</Text>
+      </HapticPressable>
     </View>
   );
 }
