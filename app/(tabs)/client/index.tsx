@@ -212,9 +212,12 @@ const styles = StyleSheet.create({
   },
   locationIconText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
   },
   locationText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     fontWeight: '500',
   },
@@ -222,6 +225,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontWeight: 'bold',
     fontSize: 14,
+fontFamily: 'Montserrat',
   },
   actionButtonsContainer: {
     flexDirection: 'row',
@@ -242,6 +246,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#1F2937',
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
@@ -249,6 +254,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#1F2937',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 12,
   },
@@ -276,6 +282,8 @@ const styles = StyleSheet.create({
   rfiTitle: {
     color: '#1F2937',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -341,6 +349,7 @@ const styles = StyleSheet.create({
   zeroStateTitle: {
     color: '#1F2937',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },

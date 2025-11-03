@@ -328,6 +328,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     color: '#1F2937',
   },
@@ -345,6 +346,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     color: '#374151',
     marginBottom: 8,
@@ -356,6 +358,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1F2937',
     backgroundColor: '#FFFFFF',
   },
@@ -365,6 +369,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#EF4444',
     fontSize: 12,
+fontFamily: 'Montserrat',
     marginTop: 4,
   },
   filePickerButton: {
@@ -385,6 +390,8 @@ const styles = StyleSheet.create({
   },
   filePickerButtonText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#3B82F6',
   },
@@ -413,12 +420,14 @@ const styles = StyleSheet.create({
   },
   fileName: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 2,
   },
   fileSize: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#6B7280',
   },
   removeFileButton: {
@@ -426,6 +435,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     marginTop: 8,
   },
@@ -458,6 +468,8 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
   },
   modalOverlay: {
@@ -478,12 +490,15 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   successMessage: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#6B7280',
     textAlign: 'center',
   },

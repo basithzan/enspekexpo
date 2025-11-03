@@ -47,6 +47,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#6B7280',
         tabBarLabelStyle: {
           fontSize: 12,
+fontFamily: 'Montserrat',
           fontWeight: '600',
         },
         tabBarButton: (props) => {

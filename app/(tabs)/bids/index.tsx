@@ -1,32 +1,39 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { FlashList } from '@shopify/flash-list';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useMyBids } from '../../../src/api/hooks/useInspector';
-import { useAuth } from '../../../src/contexts/AuthContext';
-import { Redirect } from 'expo-router';
-import { HapticPressable } from '../../../src/components/HapticPressable';
-import { HapticType } from '../../../src/utils/haptics';
+import React, { useMemo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { FlashList } from "@shopify/flash-list";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useMyBids } from "../../../src/api/hooks/useInspector";
+import { useAuth } from "../../../src/contexts/AuthContext";
+import { Redirect } from "expo-router";
+import { HapticPressable } from "../../../src/components/HapticPressable";
+import { HapticType } from "../../../src/utils/haptics";
 
 export default function BidsScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { data: bidsData, isLoading, isFetching, refetch, error } = useMyBids();
-  
-  
+
   const bids = useMemo(() => {
     // Based on the API response structure: { "my_bids": [[Object], [Object], [Object]] }
-    const bidsList = bidsData?.my_bids || 
-                    bidsData?.data || 
-                    bidsData?.bids || 
-                    bidsData?.accepted_inspectors ||
-                    bidsData?.enquiries ||
-                    bidsData?.jobs ||
-                    [];
-    
-    
+    const bidsList =
+      bidsData?.my_bids ||
+      bidsData?.data ||
+      bidsData?.bids ||
+      bidsData?.accepted_inspectors ||
+      bidsData?.enquiries ||
+      bidsData?.jobs ||
+      [];
+
     // Sort by date (newest first)
     return bidsList.sort((a: any, b: any) => {
       const dateA = new Date(a.created_at || a.createdAt || a.updated_at || 0);
@@ -34,13 +41,13 @@ export default function BidsScreen() {
       return dateB.getTime() - dateA.getTime();
     });
   }, [bidsData]);
-  
+
   // Role-based access control
   if (!isAuthenticated) {
     return <Redirect href="/role-selection" />;
   }
 
-  if (user?.type !== 'inspector') {
+  if (user?.type !== "inspector") {
     return <Redirect href="/role-selection" />;
   }
 
@@ -50,123 +57,169 @@ export default function BidsScreen() {
 
   const getStatusText = (status: string | number | null | undefined) => {
     // Handle null/undefined status - treat as Active (open for bidding)
-    if (status === null || status === undefined) return 'Active';
+    if (status === null || status === undefined) return "Active";
     const statusStr = String(status).toLowerCase();
-    
+
     // Use API-based status determination - only consider explicitly completed/finished as completed
-    if (statusStr === 'completed' || statusStr === 'finished') {
-      return 'Completed';
+    if (statusStr === "completed" || statusStr === "finished") {
+      return "Completed";
     }
-    
+
     switch (statusStr) {
-      case '0': return 'Active';
-      case '1': return 'Pending';
-      case '2': return 'Accepted';
-      case '3': return 'Rejected';
-      case '4': return 'Cancelled';
-      case '5': return 'Active'; // Status 5 is not completed based on user feedback
-      case '6': return 'In Progress';
-      default: return 'Active'; // Default to Active for unknown status
+      case "0":
+        return "Active";
+      case "1":
+        return "Pending";
+      case "2":
+        return "Accepted";
+      case "3":
+        return "Rejected";
+      case "4":
+        return "Cancelled";
+      case "5":
+        return "Active"; // Status 5 is not completed based on user feedback
+      case "6":
+        return "In Progress";
+      default:
+        return "Active"; // Default to Active for unknown status
     }
   };
 
   const getStatusColor = (status: string | number | null | undefined) => {
     // Handle null/undefined status - treat as Active (green background)
-    if (status === null || status === undefined) return '#10B981'; // Light green for active status
+    if (status === null || status === undefined) return "#10B981"; // Light green for active status
     const statusStr = String(status).toLowerCase();
-    
+
     // Use API-based status determination - only consider explicitly completed/finished as completed
-    if (statusStr === 'completed' || statusStr === 'finished') {
-      return '#10B981'; // Light green for completed
+    if (statusStr === "completed" || statusStr === "finished") {
+      return "#10B981"; // Light green for completed
     }
-    
+
     switch (statusStr) {
-      case '0':
-      case 'active': return '#10B981'; // Light green for active status
-      case '1':
-      case 'pending': return '#F59E0B';
-      case '2':
-      case 'accepted': return '#10B981';
-      case '3':
-      case 'rejected': return '#EF4444';
-      case '4':
-      case 'cancelled': return '#6B7280';
-      case '5': return '#10B981'; // Status 5 is active, not completed
-      case '6':
-      case 'in_progress': return '#3B82F6';
-      default: return '#10B981'; // Default to active green for unknown status
+      case "0":
+      case "active":
+        return "#10B981"; // Light green for active status
+      case "1":
+      case "pending":
+        return "#F59E0B";
+      case "2":
+      case "accepted":
+        return "#10B981";
+      case "3":
+      case "rejected":
+        return "#EF4444";
+      case "4":
+      case "cancelled":
+        return "#6B7280";
+      case "5":
+        return "#10B981"; // Status 5 is active, not completed
+      case "6":
+      case "in_progress":
+        return "#3B82F6";
+      default:
+        return "#10B981"; // Default to active green for unknown status
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   // Function to find amount field
   const findAmountField = (item: any) => {
     // First check if there's an accepted_inspectors array with bid data
-    if (item.accepted_inspectors && Array.isArray(item.accepted_inspectors) && item.accepted_inspectors.length > 0) {
+    if (
+      item.accepted_inspectors &&
+      Array.isArray(item.accepted_inspectors) &&
+      item.accepted_inspectors.length > 0
+    ) {
       const acceptedInspector = item.accepted_inspectors[0];
       if (acceptedInspector.amount) {
         return acceptedInspector.amount;
       }
     }
-    
+
     const possibleFields = [
-      'amount', 'bid_amount', 'accepted_amount', 'price', 'value', 
-      'cost', 'fee', 'rate', 'bid_price', 'bid_value', 'bid_cost',
-      'accepted_price', 'accepted_value', 'accepted_cost'
+      "amount",
+      "bid_amount",
+      "accepted_amount",
+      "price",
+      "value",
+      "cost",
+      "fee",
+      "rate",
+      "bid_price",
+      "bid_value",
+      "bid_cost",
+      "accepted_price",
+      "accepted_value",
+      "accepted_cost",
     ];
-    
+
     // Try the specific fields
     for (const field of possibleFields) {
-      if (item[field] !== undefined && item[field] !== null && item[field] !== '') {
+      if (
+        item[field] !== undefined &&
+        item[field] !== null &&
+        item[field] !== ""
+      ) {
         return item[field];
       }
     }
-    
+
     return null;
   };
 
   // Function to find currency field
   const findCurrencyField = (item: any) => {
     // First check if there's an accepted_inspectors array with bid data
-    if (item.accepted_inspectors && Array.isArray(item.accepted_inspectors) && item.accepted_inspectors.length > 0) {
+    if (
+      item.accepted_inspectors &&
+      Array.isArray(item.accepted_inspectors) &&
+      item.accepted_inspectors.length > 0
+    ) {
       const acceptedInspector = item.accepted_inspectors[0];
       if (acceptedInspector.currencies) {
         return acceptedInspector.currencies;
       }
     }
-    
+
     const possibleFields = [
-      'currencies', 'currency', 'bid_currency', 'accepted_currency'
+      "currencies",
+      "currency",
+      "bid_currency",
+      "accepted_currency",
     ];
-    
+
     // Try the specific fields
     for (const field of possibleFields) {
-      if (item[field] !== undefined && item[field] !== null && item[field] !== '') {
+      if (
+        item[field] !== undefined &&
+        item[field] !== null &&
+        item[field] !== ""
+      ) {
         return item[field];
       }
     }
-    
-    return 'USD'; // Default to USD if no currency found
+
+    return "USD"; // Default to USD if no currency found
   };
 
   // Function to get currency symbol
   const getCurrencySymbol = (currencyCode: string) => {
     const currencyMap: Record<string, string> = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'INR': '₹',
-      'AED': 'د.إ',
-      'SAR': '﷼'
+      USD: "$",
+      EUR: "€",
+      GBP: "£",
+      INR: "₹",
+      AED: "د.إ",
+      SAR: "﷼",
     };
-    return currencyMap[currencyCode] || '$';
+    return currencyMap[currencyCode] || "$";
   };
 
   if (isLoading) {
@@ -174,7 +227,9 @@ export default function BidsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>My Bids</Text>
-          <Text style={styles.subtitle}>Track your bid submissions and their status</Text>
+          <Text style={styles.subtitle}>
+            Track your bid submissions and their status
+          </Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3B82F6" />
@@ -189,7 +244,9 @@ export default function BidsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>My Bids</Text>
-          <Text style={styles.subtitle}>Track your bid submissions and their status</Text>
+          <Text style={styles.subtitle}>
+            Track your bid submissions and their status
+          </Text>
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
@@ -197,7 +254,11 @@ export default function BidsScreen() {
           <Text style={styles.errorDescription}>
             There was an error loading your bids. Please try again.
           </Text>
-          <HapticPressable style={styles.retryButton} onPress={() => refetch()} hapticType={HapticType.Medium}>
+          <HapticPressable
+            style={styles.retryButton}
+            onPress={() => refetch()}
+            hapticType={HapticType.Medium}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </HapticPressable>
         </View>
@@ -209,16 +270,18 @@ export default function BidsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>My Bids</Text>
-        <Text style={styles.subtitle}>Track your bid submissions and their status</Text>
+        <Text style={styles.subtitle}>
+          Track your bid submissions and their status
+        </Text>
       </View>
-      
+
       {bids?.length > 0 ? (
         <FlashList
           data={bids}
           keyExtractor={(item: any) => String(item.id ?? Math.random())}
           renderItem={({ item }) => (
-            <BidCard 
-              item={item} 
+            <BidCard
+              item={item}
               onPress={() => openJob(item.enquiry_id || item.job_id || item.id)}
               getStatusText={getStatusText}
               getStatusColor={getStatusColor}
@@ -232,7 +295,7 @@ export default function BidsScreen() {
             <RefreshControl
               refreshing={isFetching}
               onRefresh={refetch}
-              colors={['#3B82F6']}
+              colors={["#3B82F6"]}
               tintColor="#3B82F6"
             />
           }
@@ -245,9 +308,9 @@ export default function BidsScreen() {
             <Text style={styles.emptyDescription}>
               Start bidding on jobs to see your submissions here.
             </Text>
-            <HapticPressable 
+            <HapticPressable
               style={styles.browseButton}
-              onPress={() => router.push('/(tabs)/inspector')}
+              onPress={() => router.push("/(tabs)/inspector")}
               hapticType={HapticType.Medium}
             >
               <Text style={styles.browseButtonText}>Browse Jobs</Text>
@@ -259,9 +322,17 @@ export default function BidsScreen() {
   );
 }
 
-function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField, findCurrencyField, getCurrencySymbol }: { 
-  item: any; 
-  onPress: () => void; 
+function BidCard({
+  item,
+  onPress,
+  getStatusText,
+  getStatusColor,
+  findAmountField,
+  findCurrencyField,
+  getCurrencySymbol,
+}: {
+  item: any;
+  onPress: () => void;
   getStatusText: (status: string | number) => string;
   getStatusColor: (status: string | number) => string;
   findAmountField: (item: any) => any;
@@ -269,31 +340,35 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
   getCurrencySymbol: (currencyCode: string) => string;
 }) {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   return (
-    <HapticPressable style={styles.bidCard} onPress={onPress} hapticType={HapticType.Light}>
+    <HapticPressable
+      style={styles.bidCard}
+      onPress={onPress}
+      hapticType={HapticType.Light}
+    >
       <View style={styles.bidHeader}>
         <View style={styles.bidTitleContainer}>
           <Text style={styles.bidTitle}>
-            {item.job_title || 
-             item.title || 
-             item.enquiry?.job_title || 
-             item.enquiry_title ||
-             item.project_name ||
-             'Inspection Job'}
+            {item.job_title ||
+              item.title ||
+              item.enquiry?.job_title ||
+              item.enquiry_title ||
+              item.project_name ||
+              "Inspection Job"}
           </Text>
           <Text style={styles.bidId}>
             RFI{item.enquiry_id || item.job_id || item.id || item.enquiry?.id}
           </Text>
         </View>
       </View>
-      
+
       <View style={styles.bidDetails}>
         <View style={styles.bidInfo}>
           <Text style={styles.bidLabel}>Bid Amount</Text>
@@ -302,11 +377,11 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
               const amount = findAmountField(item);
               const currency = findCurrencyField(item);
               const symbol = getCurrencySymbol(currency);
-              return amount ? `${symbol}${amount}` : 'N/A';
+              return amount ? `${symbol}${amount}` : "N/A";
             })()}
           </Text>
         </View>
-        
+
         <View style={styles.bidInfo}>
           <Text style={styles.bidLabel}>Job Posted On</Text>
           <Text style={styles.bidValue}>
@@ -314,18 +389,18 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
               // The job creation date is in the main item.created_at field
               // This is when the job was originally posted
               const jobDate = item?.created_at;
-              
-              console.log('🔍 Job Date Debug - My Bids:', {
+
+              console.log("🔍 Job Date Debug - My Bids:", {
                 jobCreatedAt: item?.created_at,
-                selectedJobDate: jobDate
+                selectedJobDate: jobDate,
               });
-              
-              return jobDate ? formatDate(jobDate) : 'N/A';
+
+              return jobDate ? formatDate(jobDate) : "N/A";
             })()}
           </Text>
         </View>
       </View>
-      
+
       <View style={styles.bidDetails}>
         <View style={styles.bidInfo}>
           <Text style={styles.bidLabel}>Bid Placed On</Text>
@@ -334,46 +409,70 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
               // The bid creation date should be in the accepted_inspectors array
               // This is when the user actually placed their bid
               let bidDate = null;
-              
+
               // Check if there's an accepted_inspectors array with bid data
-              if (item?.accepted_inspectors && Array.isArray(item.accepted_inspectors) && item.accepted_inspectors.length > 0) {
+              if (
+                item?.accepted_inspectors &&
+                Array.isArray(item.accepted_inspectors) &&
+                item.accepted_inspectors.length > 0
+              ) {
                 const acceptedInspector = item.accepted_inspectors[0];
                 // Try to find bid creation date in the accepted inspector data
-                bidDate = acceptedInspector.created_at || 
-                         acceptedInspector.bid_created_at || 
-                         acceptedInspector.bid_date ||
-                         acceptedInspector.submitted_at;
+                bidDate =
+                  acceptedInspector.created_at ||
+                  acceptedInspector.bid_created_at ||
+                  acceptedInspector.bid_date ||
+                  acceptedInspector.submitted_at;
               }
-              
+
               // Fallback to updated_at if no bid-specific date found
               if (!bidDate) {
                 bidDate = item?.updated_at;
               }
-              
-              console.log('🔍 Bid Date Debug - My Bids:', {
+
+              console.log("🔍 Bid Date Debug - My Bids:", {
                 acceptedInspectors: item?.accepted_inspectors,
                 acceptedInspectorData: item?.accepted_inspectors?.[0],
                 updatedAt: item?.updated_at,
-                selectedBidDate: bidDate
+                selectedBidDate: bidDate,
               });
-              
-              return bidDate ? formatDate(bidDate) : 'N/A';
+
+              return bidDate ? formatDate(bidDate) : "N/A";
             })()}
           </Text>
         </View>
-        
+
         <View style={styles.bidInfo}>
           <Text style={styles.bidLabel}>Status</Text>
-          <Text style={[styles.bidValue, { color: getStatusColor(item.status || item.bid_status || item.accepted_status || (item.accepted_inspectors?.[0]?.status) || '1') }]}>
-            {getStatusText(item.status || item.bid_status || item.accepted_status || (item.accepted_inspectors?.[0]?.status) || '1')}
+          <Text
+            style={[
+              styles.bidValue,
+              {
+                color: getStatusColor(
+                  item.status ||
+                    item.bid_status ||
+                    item.accepted_status ||
+                    item.accepted_inspectors?.[0]?.status ||
+                    "1"
+                ),
+              },
+            ]}
+          >
+            {getStatusText(
+              item.status ||
+                item.bid_status ||
+                item.accepted_status ||
+                item.accepted_inspectors?.[0]?.status ||
+                "1"
+            )}
           </Text>
         </View>
       </View>
-      
+
       <View style={styles.bidFooter}>
         <Text style={styles.bidLocation}>
-          <Ionicons name="location-outline" size={14} color="#6B7280" />
-          {' '}{item.vendor_location || item.location || 'Location not specified'}
+          <Ionicons name="location-outline" size={14} color="#6B7280" />{" "}
+          {item.vendor_location || item.location || "Location not specified"}
         </Text>
         <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
       </View>
@@ -384,22 +483,26 @@ function BidCard({ item, onPress, getStatusText, getStatusColor, findAmountField
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: "#E5E7EB",
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
+fontFamily: 'Montserrat',
+    fontWeight: "bold",
+    fontFamily: 'Montserrat',
+    color: "#1F2937",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
   },
   content: {
     flex: 1,
@@ -407,54 +510,60 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+fontFamily: 'Montserrat',
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 8,
   },
   emptyDescription: {
     fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
+    textAlign: "center",
     lineHeight: 20,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
     marginTop: 12,
   },
   browseButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 16,
   },
   browseButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
+    fontWeight: "600",
   },
   bidCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     marginHorizontal: 20,
     marginVertical: 8,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -468,18 +577,21 @@ const styles = StyleSheet.create({
   },
   bidTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 4,
   },
   bidId: {
     fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
+    fontWeight: "500",
   },
   bidDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 12,
   },
   bidInfo: {
@@ -487,57 +599,64 @@ const styles = StyleSheet.create({
   },
   bidLabel: {
     fontSize: 12,
-    color: '#6B7280',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
     marginBottom: 2,
   },
   bidValue: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
+fontFamily: 'Montserrat',
+    fontWeight: "600",
+    color: "#1F2937",
   },
   bidFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: "#F3F4F6",
   },
   bidLocation: {
     fontSize: 12,
-    color: '#6B7280',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
     flex: 1,
   },
   errorContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
     paddingHorizontal: 20,
   },
   errorTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+fontFamily: 'Montserrat',
+    fontWeight: "600",
+    color: "#1F2937",
     marginTop: 16,
     marginBottom: 8,
   },
   errorDescription: {
     fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
+fontFamily: 'Montserrat',
+    color: "#6B7280",
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: "#3B82F6",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
+    fontWeight: "600",
   },
 });

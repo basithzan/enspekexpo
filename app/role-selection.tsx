@@ -138,6 +138,7 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 32,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#111827',
     marginBottom: 8,
@@ -146,6 +147,8 @@ const styles = StyleSheet.create({
   },
   welcomeSubtitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#6B7280',
     textAlign: 'center',
     fontWeight: '400',
@@ -202,6 +205,7 @@ const styles = StyleSheet.create({
   },
   roleCardTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
@@ -209,6 +213,7 @@ const styles = StyleSheet.create({
   },
   roleCardDescription: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     lineHeight: 20,
     fontWeight: '400',

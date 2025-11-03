@@ -333,6 +333,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     color: '#1F2937',
   },
@@ -346,10 +347,13 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#FFFFFF',
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   subtitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#6B7280',
     marginBottom: 16,
   },
@@ -368,6 +372,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     color: '#3B82F6',
   },
@@ -383,6 +388,8 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#6B7280',
   },
   errorContainer: {
@@ -394,6 +401,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginTop: 16,
@@ -401,6 +409,7 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
@@ -415,6 +424,8 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   emptyState: {
@@ -426,6 +437,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginTop: 16,
@@ -433,6 +445,7 @@ const styles = StyleSheet.create({
   },
   emptyDescription: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
@@ -482,6 +495,8 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 4,
@@ -491,6 +506,7 @@ const styles = StyleSheet.create({
   },
   notificationMessage: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     lineHeight: 20,
   },
@@ -504,6 +520,7 @@ const styles = StyleSheet.create({
   },
   notificationTime: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
   },
   unreadDot: {

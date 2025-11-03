@@ -28,6 +28,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#F5F7FA',
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     marginBottom: 16,
   },

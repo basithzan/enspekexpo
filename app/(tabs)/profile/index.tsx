@@ -751,6 +751,7 @@ const styles = StyleSheet.create({
   },
   onlineText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#475569',
   },
@@ -799,6 +800,7 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#3B82F6',
     fontSize: 36,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     letterSpacing: -1,
   },
@@ -808,6 +810,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 4,
@@ -815,6 +818,8 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#64748B',
     marginBottom: 8,
     fontWeight: '500',
@@ -830,6 +835,7 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#3B82F6',
     fontWeight: '600',
     textTransform: 'capitalize',
@@ -851,6 +857,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#3B82F6',
   },
@@ -892,12 +899,15 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1E293B',
     marginBottom: 2,
   },
   menuSubtitle: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '400',
   },
@@ -934,6 +944,8 @@ const styles = StyleSheet.create({
   logoutText: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#DC2626',
   },
@@ -943,6 +955,7 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#94A3B8',
     fontWeight: '500',
   },
@@ -963,6 +976,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1E293B',
   },
@@ -972,6 +986,8 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '500',
   },
@@ -983,6 +999,8 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#FFFFFF',
     fontWeight: '600',
   },
@@ -1013,6 +1031,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1E293B',
   },
@@ -1021,6 +1041,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1E293B',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1042,6 +1064,8 @@ const styles = StyleSheet.create({
   cvUploadText: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#3B82F6',
     fontWeight: '500',
     marginLeft: 12,
@@ -1058,6 +1082,7 @@ const styles = StyleSheet.create({
   cvFileName: {
     flex: 1,
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#059669',
     fontWeight: '500',
     marginLeft: 8,
@@ -1075,6 +1100,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#3B82F6',
     fontWeight: '600',
     marginLeft: 4,
@@ -1096,6 +1122,7 @@ const styles = StyleSheet.create({
   },
   entryNumber: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#64748B',
     backgroundColor: '#E2E8F0',
@@ -1111,6 +1138,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1E293B',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1154,7 +1183,8 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   clientAvatarText: {
-    fontSize: 48,
+    fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -1164,6 +1194,7 @@ const styles = StyleSheet.create({
   },
   clientUserName: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginBottom: 4,
@@ -1171,6 +1202,7 @@ const styles = StyleSheet.create({
   },
   clientUserEmail: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
   },
   clientEditButton: {
@@ -1184,6 +1216,7 @@ const styles = StyleSheet.create({
   },
   clientEditButtonText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -1201,11 +1234,13 @@ const styles = StyleSheet.create({
   },
   aboutMeTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#1F2937',
   },
   aboutMeText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#78828A',
     lineHeight: 20,
   },
@@ -1228,6 +1263,7 @@ const styles = StyleSheet.create({
   },
   logoutAccountText: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#EF4444',
   },
@@ -1247,6 +1283,7 @@ const styles = StyleSheet.create({
   },
   deleteAccountText: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#EF4444',
   },
@@ -1266,18 +1303,21 @@ const styles = StyleSheet.create({
   },
   deleteModalTitle: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: 16,
   },
   deleteModalText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#374151',
     lineHeight: 20,
     marginBottom: 12,
   },
   deleteModalEmail: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#3B82F6',
     marginBottom: 12,
@@ -1292,6 +1332,8 @@ const styles = StyleSheet.create({
   },
   deleteModalCloseText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#FFFFFF',
   },

@@ -832,6 +832,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#1E293B',
   },
@@ -866,6 +867,7 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#3B82F6',
     fontSize: 36,
+fontFamily: 'Montserrat',
     fontWeight: '700',
   },
   avatarEditButton: {
@@ -883,6 +885,7 @@ const styles = StyleSheet.create({
   },
   avatarLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '500',
   },
@@ -891,6 +894,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#1E293B',
     marginBottom: 16,
@@ -900,6 +904,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
@@ -911,6 +916,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1E293B',
     backgroundColor: '#FFFFFF',
   },
@@ -935,6 +942,8 @@ const styles = StyleSheet.create({
   },
   countryText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1E293B',
   },
   placeholderText: {
@@ -966,6 +975,8 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   modalContainer: {
@@ -983,6 +994,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#1E293B',
   },
@@ -1000,11 +1012,14 @@ const styles = StyleSheet.create({
   },
   countryName: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1E293B',
     fontWeight: '500',
   },
   countryCode: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '500',
   },
@@ -1022,6 +1037,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1E293B',
   },
   noResultsContainer: {
@@ -1030,6 +1047,8 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '500',
   },

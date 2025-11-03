@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     color: '#000000',
     textAlign: 'center',
@@ -148,6 +149,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#000000',
     textAlign: 'center',
     marginBottom: 40,
@@ -163,6 +166,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     marginBottom: 16,
     color: '#000000',
   },
@@ -179,6 +184,8 @@ const styles = StyleSheet.create({
   registerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   secondaryActions: {
@@ -187,6 +194,7 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#1E40AF',
     fontSize: 14,
+fontFamily: 'Montserrat',
     textDecorationLine: 'underline',
   },
 });

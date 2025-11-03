@@ -629,6 +629,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#111827',
     marginBottom: 8,
@@ -636,6 +637,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#6B7280',
     lineHeight: 22,
     fontWeight: '400',
@@ -680,6 +683,8 @@ const styles = StyleSheet.create({
   },
   toggleOptionText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -694,6 +699,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
@@ -719,6 +725,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#111827',
     fontWeight: '400',
     padding: 0,
@@ -752,6 +760,8 @@ const styles = StyleSheet.create({
   phoneInput: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#111827',
     fontWeight: '400',
     padding: 0,
@@ -768,6 +778,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#3B82F6',
     fontWeight: '600',
   },
@@ -776,6 +787,7 @@ const styles = StyleSheet.create({
   },
   otpHint: {
     fontSize: 13,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     marginBottom: 12,
     lineHeight: 18,
@@ -788,6 +800,7 @@ const styles = StyleSheet.create({
   },
   resendButtonText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#3B82F6',
     fontWeight: '600',
   },
@@ -817,6 +830,8 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -828,11 +843,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 15,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     fontWeight: '400',
   },
   footerLink: {
     fontSize: 15,
+fontFamily: 'Montserrat',
     color: '#3B82F6',
     fontWeight: '600',
   },
@@ -866,6 +883,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#111827',
   },
@@ -874,6 +892,7 @@ const styles = StyleSheet.create({
   },
   modalDescription: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     lineHeight: 20,
     marginBottom: 24,
@@ -883,6 +902,7 @@ const styles = StyleSheet.create({
   },
   modalInputLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
@@ -908,6 +928,8 @@ const styles = StyleSheet.create({
   modalInput: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#111827',
     fontWeight: '400',
     padding: 0,
@@ -937,6 +959,8 @@ const styles = StyleSheet.create({
   modalSubmitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -946,6 +970,8 @@ const styles = StyleSheet.create({
   },
   modalCancelButtonText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#6B7280',
     fontWeight: '600',
   },

@@ -809,10 +809,12 @@ const styles = StyleSheet.create({
   },
   locationIconText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
   },
   locationText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     fontWeight: '500',
   },
@@ -823,6 +825,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#1F2937',
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
   },
   subtitle: {
@@ -855,11 +858,13 @@ const styles = StyleSheet.create({
   kpiLabel: {
     color: '#6B7280',
     fontSize: 12,
+fontFamily: 'Montserrat',
     marginBottom: 4,
   },
   kpiValue: {
     color: '#1F2937',
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
   },
   detailedKpiCard: {
@@ -878,18 +883,21 @@ const styles = StyleSheet.create({
   detailedKpiTitle: {
     color: '#1E40AF',
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },
   detailedKpiValue: {
     color: '#1E40AF',
     fontSize: 32,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     marginBottom: 4,
   },
   detailedKpiSubtitle: {
     color: '#1E40AF',
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -909,6 +917,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#1F2937',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   sectionActions: {
@@ -929,6 +938,7 @@ const styles = StyleSheet.create({
   },
   filterButtonText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -952,6 +962,7 @@ const styles = StyleSheet.create({
   jobTitle: {
     color: '#1F2937',
     fontSize: 16,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -970,6 +981,7 @@ const styles = StyleSheet.create({
   jobId: {
     color: '#0369A1',
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   jobDetails: {
@@ -984,12 +996,14 @@ const styles = StyleSheet.create({
   jobDetailLabel: {
     color: '#6B7280',
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     minWidth: 80,
   },
   jobDetailValue: {
     color: '#1F2937',
     fontSize: 14,
+fontFamily: 'Montserrat',
     flex: 1,
   },
   postedLabel: {
@@ -1004,11 +1018,13 @@ const styles = StyleSheet.create({
   postedLabelText: {
     color: '#0369A1',
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '500',
   },
   postedDate: {
     color: '#0369A1',
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   rfiContainer: {
@@ -1055,6 +1071,7 @@ const styles = StyleSheet.create({
   bidTitle: {
     color: '#1F2937',
     fontSize: 16,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     flex: 1,
     marginRight: 8,
@@ -1066,6 +1083,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   bidDetails: {
@@ -1080,12 +1098,14 @@ const styles = StyleSheet.create({
   bidDetailLabel: {
     color: '#6B7280',
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     minWidth: 100,
   },
   bidDetailValue: {
     color: '#1F2937',
     fontSize: 14,
+fontFamily: 'Montserrat',
     flex: 1,
   },
   bidFooter: {
@@ -1102,6 +1122,7 @@ const styles = StyleSheet.create({
   bidId: {
     color: '#0369A1',
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   statuspending: {
@@ -1132,6 +1153,7 @@ const styles = StyleSheet.create({
   noBidsTitle: {
     color: '#1F2937',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 8,
     textAlign: 'center',
@@ -1139,6 +1161,7 @@ const styles = StyleSheet.create({
   noBidsDescription: {
     color: '#6B7280',
     fontSize: 14,
+fontFamily: 'Montserrat',
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
@@ -1153,6 +1176,7 @@ const styles = StyleSheet.create({
   noBidsButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   skeletonCard: {
@@ -1199,6 +1223,7 @@ const styles = StyleSheet.create({
   zeroStateTitle: {
     color: '#1F2937',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -1222,6 +1247,8 @@ const styles = StyleSheet.create({
   continueTitle: {
     color: '#1F2937',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },

@@ -784,6 +784,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginLeft: 12,
@@ -802,6 +803,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     color: '#374151',
     marginBottom: 8,
@@ -813,6 +815,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1F2937',
     backgroundColor: '#FFFFFF',
   },
@@ -826,6 +830,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#EF4444',
     fontSize: 12,
+fontFamily: 'Montserrat',
     marginTop: 4,
   },
   dropdownContainer: {
@@ -853,6 +858,8 @@ const styles = StyleSheet.create({
   dropdownText: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   dropdownPlaceholder: {
@@ -887,6 +894,8 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   datePickerButton: {
@@ -902,6 +911,8 @@ const styles = StyleSheet.create({
   },
   datePickerText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   selectedDatesContainer: {
@@ -923,6 +934,7 @@ const styles = StyleSheet.create({
   },
   dateChipText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   submitButtonContainer: {
@@ -944,6 +956,8 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   modalOverlay: {
@@ -972,6 +986,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
   },
@@ -984,6 +999,7 @@ const styles = StyleSheet.create({
   },
   monthText: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
   },
@@ -999,6 +1015,7 @@ const styles = StyleSheet.create({
   },
   calendarDayHeaderText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -1017,6 +1034,7 @@ const styles = StyleSheet.create({
   },
   calendarDayText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   calendarDayTextSelected: {
@@ -1045,6 +1063,8 @@ const styles = StyleSheet.create({
   modalButtonCancelText: {
     color: '#1F2937',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   modalButtonSave: {
@@ -1053,6 +1073,8 @@ const styles = StyleSheet.create({
   modalButtonSaveText: {
     color: '#FFFFFF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
 });

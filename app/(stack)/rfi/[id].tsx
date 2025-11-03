@@ -13,6 +13,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useViewEnquiry, useEnquiryInvoices } from '../../../src/api/hooks/useEnquiry';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { HapticPressable } from '@/components/HapticPressable';
+import { HapticType } from '@/utils/haptics';
 
 export default function RfiDetails() {
   const { id } = useLocalSearchParams();
@@ -406,6 +408,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#FFFFFF',
     marginLeft: 12,
@@ -428,6 +431,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: '#9CA3AF',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
   },
   errorContainer: {
     flex: 1,
@@ -439,12 +444,15 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: '#EF4444',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   backButtonText: {
     marginTop: 24,
     color: '#3B82F6',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   statusBadge: {
@@ -455,6 +463,8 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   card: {
@@ -467,6 +477,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#F5F7FA',
     marginBottom: 16,
@@ -478,11 +489,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
     fontWeight: '500',
   },
   infoValue: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#F5F7FA',
     fontWeight: '600',
     flex: 1,
@@ -493,12 +506,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#9CA3AF',
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#F5F7FA',
   },
   datesContainer: {
@@ -517,6 +532,7 @@ const styles = StyleSheet.create({
   dateChipText: {
     color: '#F5F7FA',
     fontSize: 14,
+fontFamily: 'Montserrat',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -550,6 +566,7 @@ const styles = StyleSheet.create({
   checkInNumberText: {
     color: '#FFFFFF',
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   checkInContent: {
@@ -557,28 +574,33 @@ const styles = StyleSheet.create({
   },
   checkInInspectorName: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#F5F7FA',
     marginBottom: 4,
   },
   checkInDate: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
     marginBottom: 2,
   },
   checkInTime: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
     marginBottom: 2,
   },
   checkInAddress: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
     marginTop: 8,
     marginBottom: 4,
   },
   checkInNote: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
     fontStyle: 'italic',
     marginTop: 4,
@@ -602,17 +624,21 @@ const styles = StyleSheet.create({
   },
   inspectorName: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#F5F7FA',
     marginBottom: 4,
   },
   inspectorEmail: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
     marginBottom: 2,
   },
   inspectorPhone: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
   },
   availabilitySection: {
@@ -620,6 +646,7 @@ const styles = StyleSheet.create({
   },
   availabilityLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#9CA3AF',
     marginBottom: 8,
@@ -640,6 +667,7 @@ const styles = StyleSheet.create({
   },
   invoiceTitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#F5F7FA',
   },
@@ -650,15 +678,18 @@ const styles = StyleSheet.create({
   },
   invoiceStatusText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   invoiceAmount: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#F5F7FA',
     marginBottom: 4,
   },
   invoiceDate: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#9CA3AF',
   },
 });

@@ -468,6 +468,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginLeft: 12,
@@ -499,6 +500,8 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   filterSection: {
@@ -506,6 +509,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     color: '#0F172A',
     marginBottom: 12,
@@ -528,6 +532,7 @@ const styles = StyleSheet.create({
   dateInputText: {
     flex: 1,
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   dateInputPlaceholder: {
@@ -554,6 +559,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   dropdownPlaceholder: {
@@ -585,6 +591,7 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   divider: {
@@ -601,6 +608,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
   },
   requestsList: {
@@ -625,11 +633,14 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#475569',
     marginBottom: 4,
   },
   requestTitle: {
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#0F172A',
   },
@@ -642,6 +653,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '500',
     color: '#FFFFFF',
   },
@@ -657,6 +669,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '300',
   },
@@ -669,6 +682,7 @@ const styles = StyleSheet.create({
   },
   rfiText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     color: '#15416E',
     fontWeight: '500',
   },
@@ -679,6 +693,7 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
     marginTop: 16,
@@ -686,6 +701,7 @@ const styles = StyleSheet.create({
   },
   emptyStateDescription: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 32,
@@ -711,6 +727,7 @@ const styles = StyleSheet.create({
   },
   datePickerTitle: {
     fontSize: 20,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
   },
@@ -723,6 +740,7 @@ const styles = StyleSheet.create({
   },
   monthText: {
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#1F2937',
   },
@@ -738,6 +756,7 @@ const styles = StyleSheet.create({
   },
   calendarDayHeaderText: {
     fontSize: 12,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -756,6 +775,7 @@ const styles = StyleSheet.create({
   },
   calendarDayText: {
     fontSize: 14,
+fontFamily: 'Montserrat',
     color: '#1F2937',
   },
   calendarDayTextSelected: {

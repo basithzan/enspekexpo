@@ -50,6 +50,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#1F2937',
     fontSize: 24,
+fontFamily: 'Montserrat',
     fontWeight: 'bold',
     marginBottom: 16,
   },
@@ -63,6 +64,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#1F2937',
     fontSize: 18,
+fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 12,
   },
@@ -81,6 +83,8 @@ const styles = StyleSheet.create({
   optionText: {
     color: '#374151',
     fontSize: 16,
+fontFamily: 'Montserrat',
+fontFamily: 'Montserrat',
     fontWeight: '500',
   },
   optionTextSelected: {
