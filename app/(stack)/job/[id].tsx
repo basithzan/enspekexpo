@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   Image,
+<<<<<<< HEAD
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -33,6 +34,21 @@ import {
 import { FONTS } from "../../../src/config/fonts";
 
 const WEBSITE_IMAGE_URL = "https://erpbeta.enspek.com";
+=======
+  KeyboardAvoidingView
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../../../src/api/client';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
+import { useEnquiryCheckIn } from '../../../src/api/hooks/useEnquiry';
+import { useAuth } from '../../../src/contexts/AuthContext';
+import { HapticPressable } from '../../../src/components/HapticPressable';
+import { HapticType, hapticSuccess, hapticError } from '../../../src/utils/haptics';
+>>>>>>> 8d776984 (register)
 
 export default function JobDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -83,6 +99,82 @@ export default function JobDetailsScreen() {
   const [isConfirmingProceed, setIsConfirmingProceed] = useState(false);
 
   const checkInMutation = useEnquiryCheckIn();
+
+  // Parse availability dates from DD/MM/YYYY format
+  const parseAvailabilityDates = useCallback((availability: string | null | undefined): Date[] => {
+    if (!availability) return [];
+    
+    try {
+      // Split by comma and parse each date
+      const dateStrings = availability.split(',').map(s => s.trim()).filter(Boolean);
+      return dateStrings
+        .map(dateStr => {
+          // Try DD/MM/YYYY format first (most common)
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+            const year = parseInt(parts[2], 10);
+            const date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) return date;
+          }
+          
+          // Fallback to ISO format or other formats
+          const date = new Date(dateStr);
+          if (!isNaN(date.getTime())) return date;
+          return null;
+        })
+        .filter((date): date is Date => date !== null);
+    } catch (e) {
+      console.error('Error parsing availability dates:', e);
+      return [];
+    }
+  }, []);
+
+  // Check if today is an available check-in date
+  const isTodayAvailableForCheckIn = useCallback((): boolean => {
+    const availability = jobData?.my_bid?.availability || jobData?.accepted_bid?.availability;
+    if (!availability) return false;
+    
+    const availableDates = parseAvailabilityDates(availability);
+    if (availableDates.length === 0) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return availableDates.some(date => {
+      const availableDate = new Date(date);
+      availableDate.setHours(0, 0, 0, 0);
+      return availableDate.getTime() === today.getTime();
+    });
+  }, [jobData, parseAvailabilityDates]);
+
+  // Check if user has already checked in today
+  const hasCheckedInToday = useCallback((): boolean => {
+    if (!checkins || checkins.length === 0) return false;
+    
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    return checkins.some((checkin: any) => {
+      if (!checkin.created_at && !checkin.date) return false;
+      
+      // Parse the check-in date
+      const checkInDateStr = checkin.created_at || checkin.date;
+      let checkInDate: Date;
+      
+      try {
+        checkInDate = new Date(checkInDateStr);
+        if (isNaN(checkInDate.getTime())) return false;
+      } catch {
+        return false;
+      }
+      
+      const checkInDateOnly = checkInDate.toISOString().split('T')[0];
+      return checkInDateOnly === todayStr;
+    });
+  }, [checkins]);
+
 
   // Check if bid form is valid
   const isBidFormValid = React.useMemo(() => {
@@ -296,6 +388,66 @@ export default function JobDetailsScreen() {
     }
   }, [jobData]);
 
+  // Check if user has already bid on this job - computed values for hooks
+  const hasUserBid = jobData?.already_bidded || jobData?.my_bid;
+  const userBidStatus = jobData?.my_bid?.status || jobData?.my_bid_status;
+
+  // Determine if check-in button should be enabled
+  const canCheckIn = React.useMemo(() => {
+    if (!hasUserBid || (String(userBidStatus).toLowerCase() !== 'accepted' && String(userBidStatus) !== '2')) {
+      return false;
+    }
+    
+    const todayIsAvailable = isTodayAvailableForCheckIn();
+    const alreadyCheckedIn = hasCheckedInToday();
+    
+    return todayIsAvailable && !alreadyCheckedIn;
+  }, [hasUserBid, userBidStatus, isTodayAvailableForCheckIn, hasCheckedInToday, jobData]);
+
+  // Get check-in status message
+  const getCheckInStatusMessage = useCallback((): string | null => {
+    if (!hasUserBid || (String(userBidStatus).toLowerCase() !== 'accepted' && String(userBidStatus) !== '2')) {
+      return null;
+    }
+
+    if (hasCheckedInToday()) {
+      return 'Already checked in today';
+    }
+
+    const availability = jobData?.my_bid?.availability || jobData?.accepted_bid?.availability;
+    if (!availability) {
+      return 'No check-in dates available';
+    }
+
+    const availableDates = parseAvailabilityDates(availability);
+    if (availableDates.length === 0) {
+      return 'No check-in dates available';
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Find the next available date
+    const sortedDates = availableDates.sort((a, b) => a.getTime() - b.getTime());
+    const nextDate = sortedDates.find(date => {
+      const availableDate = new Date(date);
+      availableDate.setHours(0, 0, 0, 0);
+      return availableDate.getTime() >= today.getTime();
+    });
+
+    if (!nextDate) {
+      return 'No upcoming check-in dates';
+    }
+
+    const nextDateStr = nextDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    return `Check-in available on ${nextDateStr}`;
+  }, [hasUserBid, userBidStatus, hasCheckedInToday, jobData, parseAvailabilityDates]);
+
   // Bid mutation
   const bidMutation = useMutation({
     mutationFn: async (bidData: any) => {
@@ -442,6 +594,7 @@ export default function JobDetailsScreen() {
       fullResponseData: jobData,
     });
   }
+<<<<<<< HEAD
 
   // Check if user has already bid on this job
   const hasUserBid = jobData?.already_bidded || jobData?.my_bid;
@@ -449,6 +602,12 @@ export default function JobDetailsScreen() {
   const userBidStatus = jobData?.my_bid?.status || jobData?.my_bid_status;
   const userBidCurrency =
     jobData?.my_bid?.currencies || jobData?.my_bid_currency;
+=======
+  
+  // Check if user has already bid on this job - additional values
+  const userBidAmount = jobData?.my_bid?.amount || jobData?.my_bid_amount;
+  const userBidCurrency = jobData?.my_bid?.currencies || jobData?.my_bid_currency;
+>>>>>>> 8d776984 (register)
 
   // Function to get currency symbol
   const getCurrencySymbol = (currencyCode: string) => {
@@ -508,6 +667,13 @@ export default function JobDetailsScreen() {
 
   // Open check-in modal and fetch location
   const handleCheckInPress = async () => {
+    // Validate check-in eligibility
+    if (!canCheckIn) {
+      const message = getCheckInStatusMessage();
+      Alert.alert('Check-in Unavailable', message || 'Check-in is not available at this time.');
+      return;
+    }
+
     try {
       setIsCheckingIn(true);
 
@@ -573,6 +739,7 @@ export default function JobDetailsScreen() {
         return;
       }
 
+<<<<<<< HEAD
       // Show action sheet for camera or gallery
       Alert.alert("Select Photo", "Choose an option", [
         {
@@ -625,6 +792,23 @@ export default function JobDetailsScreen() {
     } catch (error) {
       console.error("Error picking image:", error);
       Alert.alert("Error", "Failed to pick image");
+=======
+      // Launch camera directly
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setCheckInPhoto(result.assets[0].uri);
+        setCheckInPhotoFile(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
+>>>>>>> 8d776984 (register)
     }
   };
 
@@ -980,6 +1164,7 @@ export default function JobDetailsScreen() {
         </HapticPressable>
         <Text style={styles.headerTitle}>Job Details</Text>
         <View style={styles.headerRight}>
+<<<<<<< HEAD
           {hasUserBid &&
             (String(userBidStatus).toLowerCase() === "accepted" ||
               String(userBidStatus) === "2") && (
@@ -995,6 +1180,26 @@ export default function JobDetailsScreen() {
                 </Text>
               </HapticPressable>
             )}
+=======
+          {hasUserBid && (String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
+            <View style={styles.checkInButtonContainer}>
+              <HapticPressable
+                style={[styles.checkInButton, !canCheckIn && styles.checkInButtonDisabled]}
+                onPress={handleCheckInPress}
+                disabled={isCheckingIn || !canCheckIn}
+                hapticType={HapticType.Medium}
+              >
+                <Ionicons name="log-in-outline" size={18} color={canCheckIn ? "#065F46" : "#9CA3AF"} />
+                <Text style={[styles.checkInButtonText, !canCheckIn && styles.checkInButtonTextDisabled]}>
+                  {isCheckingIn ? 'Checking in…' : 'Check-in'}
+                </Text>
+              </HapticPressable>
+              {!canCheckIn && getCheckInStatusMessage() && (
+                <Text style={styles.checkInStatusMessage}>{getCheckInStatusMessage()}</Text>
+              )}
+            </View>
+          )}
+>>>>>>> 8d776984 (register)
         </View>
       </View>
 
@@ -2091,6 +2296,7 @@ fontFamily: 'Montserrat', lineHeight: 22 }}>
         </View>
       </Modal>
 
+<<<<<<< HEAD
       {/* Check-in Modal */}
       <Modal
         visible={showCheckInModal}
@@ -2108,6 +2314,107 @@ fontFamily: 'Montserrat', lineHeight: 22 }}>
               >
                 <Ionicons name="close" size={24} color="#6B7280" />
               </HapticPressable>
+=======
+          {/* Check-in Modal */}
+          <Modal
+            visible={showCheckInModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowCheckInModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoidingView}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+              >
+                <View style={styles.checkInModalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Check In Details</Text>
+                  <HapticPressable onPress={() => setShowCheckInModal(false)} hapticType={HapticType.Light}>
+                    <Ionicons name="close" size={24} color="#6B7280" />
+                  </HapticPressable>
+                </View>
+
+                <ScrollView 
+                  style={styles.checkInModalScroll} 
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={styles.checkInModalScrollContent}
+                >
+                  {/* Location Display */}
+                  {isLocationFetched && fetchedLocation?.address && (
+                    <View style={styles.checkInSection}>
+                      <Text style={styles.checkInLabel}>Current Location:</Text>
+                      <Text style={styles.checkInLocationText}>{fetchedLocation.address}</Text>
+                    </View>
+                  )}
+
+                  {/* Check-in Note */}
+                  <View style={styles.checkInSection}>
+                    <Text style={styles.checkInLabel}>Enter Check In Note (Optional)</Text>
+                    <TextInput
+                      style={styles.checkInNoteInput}
+                      value={checkInNote}
+                      onChangeText={setCheckInNote}
+                      placeholder="Enter Check In Note (Optional)"
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+
+                  {/* Photo Upload */}
+                  <View style={styles.checkInSection}>
+                    <Text style={styles.checkInLabel}>Upload Check In Photo</Text>
+                    
+                    {checkInPhoto && (
+                      <View style={styles.photoPreviewContainer}>
+                        <Image source={{ uri: checkInPhoto }} style={styles.photoPreview} />
+                        <HapticPressable
+                          style={styles.removePhotoButton}
+                          onPress={() => {
+                            setCheckInPhoto(null);
+                            setCheckInPhotoFile(null);
+                          }}
+                          hapticType={HapticType.Light}
+                        >
+                          <Ionicons name="close-circle" size={24} color="#EF4444" />
+                        </HapticPressable>
+                      </View>
+                    )}
+
+                    <HapticPressable
+                      style={styles.uploadPhotoButton}
+                      onPress={handleCheckInPhotoUpload}
+                      hapticType={HapticType.Medium}
+                    >
+                      <Ionicons name="camera-outline" size={24} color="#15416E" />
+                      <Text style={styles.uploadPhotoButtonText}>
+                        {checkInPhoto ? 'Change Photo' : 'Take Photo'}
+                      </Text>
+                    </HapticPressable>
+                  </View>
+
+                  {/* Submit Button - Only show when photo is uploaded */}
+                  {(checkInPhoto || checkInPhotoFile) && (
+                    <HapticPressable
+                      style={[styles.submitCheckInButton, isCheckingIn && styles.submitCheckInButtonDisabled]}
+                      onPress={handleSubmitCheckIn}
+                      disabled={isCheckingIn}
+                      hapticType={HapticType.Medium}
+                    >
+                      {isCheckingIn ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.submitCheckInButtonText}>Submit Check In</Text>
+                      )}
+                    </HapticPressable>
+                  )}
+                </ScrollView>
+                </View>
+              </KeyboardAvoidingView>
+>>>>>>> 8d776984 (register)
             </View>
 
             <ScrollView
@@ -2437,20 +2744,51 @@ fontFamily: 'Montserrat',
     minWidth: 40,
     alignItems: "flex-end",
   },
+  checkInButtonContainer: {
+    alignItems: 'flex-end',
+  },
   checkInButton: {
+<<<<<<< HEAD
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     backgroundColor: "#D1FAE5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
+=======
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+>>>>>>> 8d776984 (register)
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#065F46',
+  },
+  checkInButtonDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
   },
   checkInButtonText: {
+<<<<<<< HEAD
     fontFamily: FONTS.bold,
     color: "#065F46",
+=======
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
+  },
+  checkInButtonTextDisabled: {
+    color: '#9CA3AF',
+  },
+  checkInStatusMessage: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 4,
+    textAlign: 'center',
+>>>>>>> 8d776984 (register)
   },
   content: {
     flex: 1,
@@ -3050,6 +3388,10 @@ fontFamily: 'Montserrat',
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   modalContent: {
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 20,
@@ -3412,6 +3754,9 @@ fontFamily: 'Montserrat',
   checkInModalScroll: {
     paddingHorizontal: 20,
     paddingTop: 10,
+  },
+  checkInModalScrollContent: {
+    paddingBottom: 20,
   },
   checkInSection: {
     marginBottom: 20,

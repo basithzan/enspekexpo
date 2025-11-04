@@ -94,12 +94,12 @@ export default function LoginScreen() {
     }
 
     const fullPhoneNumber = `${selectedCountry.phone_code}${phone.trim()}`;
-    const countryCodeAlpha = selectedCountry.code;
+    const countryName = selectedCountry.name; // Use country name instead of ISO code
 
     setIsLoading(true);
     
     try {
-      const response = await WhatsAppOTPService.sendOTP(fullPhoneNumber, countryCodeAlpha);
+      const response = await WhatsAppOTPService.sendOTP(fullPhoneNumber, countryName);
       
       if (response.success) {
         setOtpSent(true);
@@ -125,12 +125,12 @@ export default function LoginScreen() {
     }
 
     const fullPhoneNumber = `${selectedCountry.phone_code}${phone.trim()}`;
-    const countryCodeAlpha = selectedCountry.code;
+    const countryName = selectedCountry.name; // Use country name instead of ISO code
 
     setIsLoading(true);
     
     try {
-      const response = await WhatsAppOTPService.verifyOTP(fullPhoneNumber, otp.trim(), countryCodeAlpha);
+      const response = await WhatsAppOTPService.verifyOTP(fullPhoneNumber, otp.trim(), countryName);
       
       if (response.success) {
         hapticSuccess();
@@ -466,13 +466,15 @@ export default function LoginScreen() {
                       />
                     </Pressable>
                   </View>
-                  <HapticPressable 
-                    style={styles.forgotPasswordButton}
-                    onPress={() => setShowForgotPassword(true)}
-                    hapticType={HapticType.Light}
-                  >
-                    <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                  </HapticPressable>
+                  {type !== 'inspector' && (
+                    <HapticPressable 
+                      style={styles.forgotPasswordButton}
+                      onPress={() => setShowForgotPassword(true)}
+                      hapticType={HapticType.Light}
+                    >
+                      <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                    </HapticPressable>
+                  )}
                 </View>
               </>
             )}
@@ -503,7 +505,7 @@ export default function LoginScreen() {
             <Text style={styles.footerText}>
               {type === 'client' ? "Don't have an account? " : "Need help? "}
             </Text>
-            <HapticPressable onPress={() => router.push('/register')} hapticType={HapticType.Light}>
+            <HapticPressable onPress={() => router.push(`/register?type=${type || 'client'}`)} hapticType={HapticType.Light}>
               <Text style={styles.footerLink}>
                 {type === 'client' ? 'Sign Up' : 'Contact Support'}
               </Text>
