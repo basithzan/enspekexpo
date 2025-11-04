@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -24,6 +24,8 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { HapticPressable } from '../../../src/components/HapticPressable';
 import { HapticType } from '../../../src/utils/haptics';
+import { useInspectorProfile } from '../../../src/api/hooks/useInspector';
+import { apiClient } from '../../../src/api/client';
 
 const { width } = Dimensions.get('window');
 const API_BASE_URL = 'https://erpbeta.enspek.com';
@@ -33,6 +35,81 @@ function ClientProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [clientBio, setClientBio] = useState<string>('');
+  
+  // Fetch and set client bio from API
+  useEffect(() => {
+    const fetchClientBio = async () => {
+      try {
+        // Try multiple endpoints to get client profile data
+        const endpoints = [
+          '/get-client-data',
+          '/get-client-profile',
+          '/edit-client-data', // Sometimes returns profile data
+        ];
+        
+        for (const endpoint of endpoints) {
+          try {
+            const response = await apiClient.post(endpoint);
+            if (response.data?.success || response.data?.user || response.data?.client_details) {
+              const profileData = response.data?.user || response.data?.data || response.data;
+              // Get bio from client_details, handling null values
+              const bioValue = profileData?.client_details?.bio;
+              const bio = (bioValue !== null && bioValue !== undefined && String(bioValue).trim()) 
+                         ? String(bioValue) 
+                         : profileData?.bio || 
+                           (profileData as any)?.user?.client_details?.bio ||
+                           (profileData as any)?.user?.bio ||
+                           '';
+              
+              console.log('📋 Client Profile API Response:', {
+                endpoint,
+                hasClientDetails: !!profileData?.client_details,
+                bioValue: bioValue,
+                bioValueType: typeof bioValue,
+                bio: bio,
+                bioLength: bio ? String(bio).length : 0,
+                clientDetails: profileData?.client_details
+              });
+              
+              if (bio && String(bio).trim()) {
+                setClientBio(String(bio));
+                return; // Success, exit loop
+              }
+              
+              // If we got the profile data but bio is null/empty, still exit to avoid trying other endpoints
+              if (profileData?.client_details) {
+                console.log('⚠️ Profile data found but bio is null/empty');
+                return;
+              }
+            }
+          } catch (error) {
+            console.log(`❌ ${endpoint} failed:`, error);
+            continue; // Try next endpoint
+          }
+        }
+        
+        // Fallback: try to get from user object
+        const bioFromUser = user?.client_details?.bio || 
+                           (user as any)?.user?.client_details?.bio ||
+                           (user as any)?.bio ||
+                           '';
+        if (bioFromUser) {
+          setClientBio(String(bioFromUser));
+        }
+      } catch (error) {
+        console.error('Error fetching client bio:', error);
+      }
+    };
+    
+    fetchClientBio();
+    
+    console.log('🔍 Client Profile Debug:', {
+      user,
+      clientDetails: user?.client_details,
+      userId: user?.id
+    });
+  }, [user]);
 
   const getAvatarUrl = () => {
     const avatar = user?.client_details?.avatar || user?.avatar;
@@ -113,17 +190,27 @@ function ClientProfileScreen() {
           </View>
         </View>
 
-        {/* About Me Section */}
-        {user?.client_details?.bio && (
-          <View style={styles.aboutMeSection}>
-            <View style={styles.aboutMeHeader}>
-              <Text style={styles.aboutMeTitle}>About Me</Text>
-            </View>
-            <Text style={styles.aboutMeText}>
-              {user.client_details.bio}
-            </Text>
-          </View>
-        )}
+        {/* About Me Section - Always Visible */}
+        <View style={styles.aboutMeSection}>
+          <Text style={styles.aboutMeTitle}>About Me</Text>
+          <Text style={styles.aboutMeText}>
+            {(() => {
+              // Try multiple paths for bio data
+              const bio = clientBio || 
+                         user?.client_details?.bio || 
+                         (user as any)?.user?.client_details?.bio ||
+                         (user as any)?.bio ||
+                         '';
+              
+              console.log('🎨 Client About Me - Bio:', bio);
+              
+              if (bio && String(bio).trim()) {
+                return String(bio);
+              }
+              return 'No bio information available. Tap "Edit Profile" to add your bio.';
+            })()}
+          </Text>
+        </View>
 
         {/* Logout Section */}
         <View style={styles.logoutAccountSection}>
@@ -132,7 +219,7 @@ function ClientProfileScreen() {
             onPress={handleLogout}
             hapticType={HapticType.Warning}
           >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={18} color="#EF4444" />
             <Text style={styles.logoutAccountText}>Logout</Text>
           </HapticPressable>
         </View>
@@ -144,7 +231,7 @@ function ClientProfileScreen() {
             onPress={() => setIsDeleteModalVisible(true)}
             hapticType={HapticType.Warning}
           >
-            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Ionicons name="trash-outline" size={18} color="#EF4444" />
             <Text style={styles.deleteAccountText}>Delete My Account</Text>
           </HapticPressable>
         </View>
@@ -195,13 +282,61 @@ export default function ProfileScreen() {
   const [isOnline, setIsOnline] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [cvFile, setCvFile] = useState(null);
+  const [profileBio, setProfileBio] = useState<string>('');
+  
+  // Fetch inspector profile data
+  const { data: inspectorProfileData, isLoading: isLoadingProfile } = useInspectorProfile();
+  
+  // Update bio from profile data
+  useEffect(() => {
+    console.log('🔍 Profile Debug:', {
+      inspectorProfileData,
+      user,
+      userType: user?.type
+    });
+    
+    if (inspectorProfileData) {
+      const profileData = inspectorProfileData?.user || inspectorProfileData?.data || inspectorProfileData;
+      console.log('📋 Profile Data:', profileData);
+      const bio = profileData?.inspector_details?.bio || 
+                  profileData?.bio || 
+                  profileData?.user?.inspector_details?.bio ||
+                  profileData?.user?.bio ||
+                  user?.bio || 
+                  user?.inspector_details?.bio || 
+                  '';
+      console.log('📝 Bio found:', bio);
+      if (bio) {
+        setProfileBio(bio);
+      }
+    } else {
+      // Fallback to user data from auth context
+      const bio = user?.bio || 
+                  user?.inspector_details?.bio || 
+                  (user as any)?.user?.inspector_details?.bio ||
+                  (user as any)?.user?.bio ||
+                  '';
+      console.log('📝 Bio from user:', bio);
+      if (bio) {
+        setProfileBio(bio);
+      }
+    }
+  }, [inspectorProfileData, user]);
+  
   const [bioData, setBioData] = useState({
-    aboutMe: user?.bio || '',
+    aboutMe: profileBio,
     experience: [],
     education: [],
     languages: [],
     certifications: []
   });
+  
+  // Update bioData when profileBio changes
+  useEffect(() => {
+    if (profileBio) {
+      setBioData(prev => ({ ...prev, aboutMe: profileBio }));
+    }
+  }, [profileBio]);
 
   const handleEditBio = () => {
     setIsEditMode(true);
@@ -407,6 +542,33 @@ export default function ProfileScreen() {
 
         </View>
 
+        {/* About Me Section - Always Visible */}
+        <View style={styles.aboutMeSection}>
+          <Text style={styles.aboutMeTitle}>About Me</Text>
+          <Text style={styles.aboutMeText}>
+            {(() => {
+              // Try multiple possible paths for bio data
+              const bio = profileBio || 
+                         inspectorProfileData?.user?.inspector_details?.bio ||
+                         inspectorProfileData?.user?.bio ||
+                         inspectorProfileData?.data?.inspector_details?.bio ||
+                         inspectorProfileData?.data?.bio ||
+                         user?.inspector_details?.bio || 
+                         user?.bio || 
+                         (user as any)?.user?.inspector_details?.bio ||
+                         (user as any)?.user?.bio ||
+                         bioData.aboutMe;
+              
+              console.log('🎨 Rendering About Me with bio:', bio);
+              
+              if (bio && String(bio).trim()) {
+                return String(bio);
+              }
+              return 'No bio information available. Tap "Edit Bio" to add your bio.';
+            })()}
+          </Text>
+        </View>
+
         {/* Menu Items */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => (
@@ -437,10 +599,10 @@ export default function ProfileScreen() {
           <Pressable style={styles.logoutButton} onPress={handleLogout}>
             <View style={styles.logoutContent}>
               <View style={styles.logoutIcon}>
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                <Ionicons name="log-out-outline" size={18} color="#EF4444" />
               </View>
               <Text style={styles.logoutText}>Logout</Text>
-              <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+              <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
             </View>
           </Pressable>
         </View>
@@ -914,7 +1076,7 @@ fontFamily: 'Montserrat',
   logoutSection: {
     margin: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -930,22 +1092,21 @@ fontFamily: 'Montserrat',
   logoutContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    gap: 16,
+    padding: 14,
+    gap: 12,
   },
   logoutIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutText: {
     flex: 1,
-    fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontSize: 15,
+    fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#DC2626',
   },
@@ -1251,40 +1412,40 @@ fontFamily: 'Montserrat',
     marginHorizontal: 20,
     marginBottom: 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#FEE2E2',
   },
   logoutAccountButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   logoutAccountText: {
-    fontSize: 18,
-fontFamily: 'Montserrat',
-    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: 'Montserrat',
+    fontWeight: '600',
     color: '#EF4444',
   },
   deleteAccountSection: {
     marginHorizontal: 20,
     marginBottom: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#ECF1F6',
   },
   deleteAccountButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   deleteAccountText: {
-    fontSize: 18,
-fontFamily: 'Montserrat',
-    fontWeight: '700',
+    fontSize: 15,
+    fontFamily: 'Montserrat',
+    fontWeight: '600',
     color: '#EF4444',
   },
   modalOverlay: {

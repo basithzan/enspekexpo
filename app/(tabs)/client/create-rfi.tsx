@@ -13,12 +13,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useRequestInspection } from '../../../src/api/hooks/useClientActions';
+import { useRequestInspection, useEditInspection } from '../../../src/api/hooks/useClientActions';
 import { useProfile } from '../../../src/api/hooks/useProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { HapticPressable } from '../../../src/components/HapticPressable';
 import { HapticType, hapticSuccess, hapticError } from '../../../src/utils/haptics';
+import { useViewEnquiry } from '../../../src/api/hooks/useEnquiry';
 
 // Dropdown options
 const category_options = [
@@ -146,7 +147,16 @@ export default function CreateRfi() {
   const queryClient = useQueryClient();
   const { getCountries } = useProfile();
   const requestMutation = useRequestInspection();
+  const editMutation = useEditInspection();
   const { user } = useAuth();
+  
+  // Check if we're in edit mode
+  const isEditMode = !!params.id;
+  
+  // Fetch existing enquiry data if in edit mode
+  const { data: enquiryData, isLoading: isLoadingEnquiry } = useViewEnquiry(
+    isEditMode ? (params.id as string) : ''
+  );
 
   // Form state
   const [jobName, setJobName] = useState('');
@@ -183,6 +193,108 @@ export default function CreateRfi() {
   useEffect(() => {
     loadCountries();
   }, []);
+
+  // Pre-fill form when in edit mode and enquiry data is loaded
+  useEffect(() => {
+    if (isEditMode && enquiryData && countries.length > 0) {
+      const singleJob = enquiryData?.data || enquiryData;
+      const enquiry = singleJob?.enquiry || singleJob;
+      
+      if (enquiry) {
+        // Set basic fields
+        setJobName(enquiry.job_title || '');
+        setSupplierName(enquiry.vendor || '');
+        setSupplierLocation(enquiry.vendor_location || '');
+        setAdditionalNote(enquiry.note || '');
+
+        // Set category
+        const categoryOption = category_options.find(opt => opt.value === enquiry.category);
+        if (categoryOption) {
+          setCategory(categoryOption);
+          if (categoryOption.value === 'Other') {
+            setShowCategoryOther(true);
+            setCategoryOther(enquiry.category);
+          }
+        } else if (enquiry.category) {
+          // If category is not in predefined options, treat as "Other"
+          setCategory({ value: 'Other', label: 'Other' });
+          setShowCategoryOther(true);
+          setCategoryOther(enquiry.category);
+        }
+
+        // Set scope
+        const scopeOption = scope_options.find(opt => opt.value === enquiry.enquiry_scope);
+        if (scopeOption) {
+          setScope(scopeOption);
+          if (scopeOption.value === 'Other') {
+            setShowScopeOther(true);
+            setScopeOther(enquiry.enquiry_scope);
+          }
+        } else if (enquiry.enquiry_scope) {
+          // If scope is not in predefined options, treat as "Other"
+          setScope({ value: 'Other', label: 'Other' });
+          setShowScopeOther(true);
+          setScopeOther(enquiry.enquiry_scope);
+        }
+
+        // Set commodity
+        const commodityOption = commodity_options.find(opt => opt.value === enquiry.commodity);
+        if (commodityOption) {
+          setCommodity(commodityOption);
+          if (commodityOption.value === 'Other') {
+            setShowCommodityOther(true);
+            setCommodityOther(enquiry.commodity);
+          }
+        } else if (enquiry.commodity) {
+          // If commodity is not in predefined options, treat as "Other"
+          setCommodity({ value: 'Other', label: 'Other' });
+          setShowCommodityOther(true);
+          setCommodityOther(enquiry.commodity);
+        }
+
+        // Set country
+        const countryId = enquiry.country_id || enquiry.country?.id;
+        if (countryId) {
+          const countryOption = countries.find(c => c.value === String(countryId));
+          if (countryOption) {
+            setCountry(countryOption);
+          }
+        }
+
+        // Parse and set dates
+        if (enquiry.est_inspection_date) {
+          const dateStrings = enquiry.est_inspection_date.split(',').map(d => d.trim());
+          const parsedDates: Date[] = [];
+          
+          dateStrings.forEach(dateStr => {
+            // Try multiple date formats
+            // Format 1: DD/MM/YYYY
+            const ddmmyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (ddmmyyyy) {
+              const day = parseInt(ddmmyyyy[1]);
+              const month = parseInt(ddmmyyyy[2]) - 1;
+              const year = parseInt(ddmmyyyy[3]);
+              const date = new Date(year, month, day);
+              if (!isNaN(date.getTime())) {
+                parsedDates.push(date);
+              }
+            } else {
+              // Try ISO format or other formats
+              const date = new Date(dateStr);
+              if (!isNaN(date.getTime())) {
+                parsedDates.push(date);
+              }
+            }
+          });
+          
+          if (parsedDates.length > 0) {
+            setSelectedDates(parsedDates);
+            setTempSelectedDates(parsedDates);
+          }
+        }
+      }
+    }
+  }, [isEditMode, enquiryData, countries]);
 
   const loadCountries = async () => {
     try {
@@ -259,41 +371,85 @@ export default function CreateRfi() {
 
     const formattedDates = selectedDates.map(formatDate).sort();
 
-    const formData = {
-      job_name: jobName,
-      supplier_name: supplierName,
-      supplier_location: supplierLocation,
-      category: category?.value === 'Other' ? categoryOther : category?.value,
-      scope: scope?.value === 'Other' ? scopeOther : scope?.value,
-      commodity: commodity?.value === 'Other' ? commodityOther : commodity?.value,
-      country: Number(country?.value),
-      dates: formattedDates,
-      additional_note: additionalNote || undefined,
-    };
+    if (isEditMode) {
+      // Edit mode - use FormData for edit endpoint
+      const formData = new FormData();
+      formData.append('id', params.id as string);
+      formData.append('job_name', jobName);
+      formData.append('supplier_name', supplierName);
+      formData.append('supplier_location', supplierLocation);
+      formData.append('category', category?.value === 'Other' ? categoryOther : category?.value || '');
+      formData.append('scope', scope?.value === 'Other' ? scopeOther : scope?.value || '');
+      formData.append('commodity', commodity?.value === 'Other' ? commodityOther : commodity?.value || '');
+      formData.append('country', String(country?.value || ''));
+      formData.append('dates', formattedDates.join(','));
+      if (additionalNote) {
+        formData.append('additional_note', additionalNote);
+      }
 
-    try {
-      await requestMutation.mutateAsync(formData);
-      hapticSuccess();
-      
-      Alert.alert(
-        'Success',
-        'Your inspection request has been successfully submitted.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              queryClient.invalidateQueries({ queryKey: ['client-requests'] });
-              router.back();
+      try {
+        await editMutation.mutateAsync(formData);
+        hapticSuccess();
+        
+        Alert.alert(
+          'Success',
+          'Your inspection request has been successfully updated.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                queryClient.invalidateQueries({ queryKey: ['client-requests'] });
+                queryClient.invalidateQueries({ queryKey: ['enquiry', params.id] });
+                router.back();
+              },
             },
-          },
-        ]
-      );
-    } catch (error: any) {
-      hapticError();
-      Alert.alert(
-        'Error',
-        error?.response?.data?.message || 'Failed to submit request. Please try again.'
-      );
+          ]
+        );
+      } catch (error: any) {
+        hapticError();
+        Alert.alert(
+          'Error',
+          error?.response?.data?.message || 'Failed to update request. Please try again.'
+        );
+      }
+    } else {
+      // Create mode - use JSON for create endpoint
+      const formData = {
+        job_name: jobName,
+        supplier_name: supplierName,
+        supplier_location: supplierLocation,
+        category: category?.value === 'Other' ? categoryOther : category?.value,
+        scope: scope?.value === 'Other' ? scopeOther : scope?.value,
+        commodity: commodity?.value === 'Other' ? commodityOther : commodity?.value,
+        country: Number(country?.value),
+        dates: formattedDates,
+        additional_note: additionalNote || undefined,
+      };
+
+      try {
+        await requestMutation.mutateAsync(formData);
+        hapticSuccess();
+        
+        Alert.alert(
+          'Success',
+          'Your inspection request has been successfully submitted.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                queryClient.invalidateQueries({ queryKey: ['client-requests'] });
+                router.back();
+              },
+            },
+          ]
+        );
+      } catch (error: any) {
+        hapticError();
+        Alert.alert(
+          'Error',
+          error?.response?.data?.message || 'Failed to submit request. Please try again.'
+        );
+      }
     }
   };
 
@@ -415,6 +571,18 @@ export default function CreateRfi() {
     );
   };
 
+  // Show loading state when fetching enquiry data in edit mode
+  if (isEditMode && isLoadingEnquiry) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Loading RFI details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -422,7 +590,7 @@ export default function CreateRfi() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
-        <Text style={styles.headerTitle}>Request for Inspection</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Edit RFI' : 'Request for Inspection'}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -746,16 +914,18 @@ export default function CreateRfi() {
         <HapticPressable
           style={[
             styles.submitButton,
-            requestMutation.isPending && styles.submitButtonDisabled
+            (requestMutation.isPending || editMutation.isPending) && styles.submitButtonDisabled
           ]}
           onPress={handleSubmit}
-          disabled={requestMutation.isPending}
+          disabled={requestMutation.isPending || editMutation.isPending}
           hapticType={HapticType.Medium}
         >
-          {requestMutation.isPending ? (
+          {(requestMutation.isPending || editMutation.isPending) ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.submitButtonText}>Request for Inspection</Text>
+            <Text style={styles.submitButtonText}>
+              {isEditMode ? 'Update Request' : 'Request for Inspection'}
+            </Text>
           )}
         </HapticPressable>
       </View>
@@ -767,6 +937,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',

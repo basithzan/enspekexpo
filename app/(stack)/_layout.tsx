@@ -9,6 +9,12 @@ export default function StackLayout() {
           headerShown: false 
         }} 
       />
+      <Stack.Screen 
+        name="rfi/[id]" 
+        options={{ 
+          headerShown: false 
+        }} 
+      />
     </Stack>
   );
 }

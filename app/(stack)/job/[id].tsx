@@ -12,7 +12,7 @@ import {
   Linking,
   Platform,
   Image,
-<<<<<<< HEAD
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -22,7 +22,16 @@ import { apiClient } from "../../../src/api/client";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+// MapView import - using try/catch to handle missing native module
+let MapView: any = null;
+let Marker: any = null;
+try {
+  const maps = require("expo-maps");
+  MapView = maps.ExpoMap || maps.default;
+} catch (e) {
+  // Map module not available - will show placeholder instead
+  console.warn("Map module not available:", e);
+}
 import { useEnquiryCheckIn } from "../../../src/api/hooks/useEnquiry";
 import { useAuth } from "../../../src/contexts/AuthContext";
 import { HapticPressable } from "../../../src/components/HapticPressable";
@@ -34,21 +43,6 @@ import {
 import { FONTS } from "../../../src/config/fonts";
 
 const WEBSITE_IMAGE_URL = "https://erpbeta.enspek.com";
-=======
-  KeyboardAvoidingView
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../../../src/api/client';
-import * as Location from 'expo-location';
-import * as ImagePicker from 'expo-image-picker';
-import { useEnquiryCheckIn } from '../../../src/api/hooks/useEnquiry';
-import { useAuth } from '../../../src/contexts/AuthContext';
-import { HapticPressable } from '../../../src/components/HapticPressable';
-import { HapticType, hapticSuccess, hapticError } from '../../../src/utils/haptics';
->>>>>>> 8d776984 (register)
 
 export default function JobDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -388,7 +382,7 @@ export default function JobDetailsScreen() {
     }
   }, [jobData]);
 
-  // Check if user has already bid on this job - computed values for hooks
+  // Check if user has already bid on this job
   const hasUserBid = jobData?.already_bidded || jobData?.my_bid;
   const userBidStatus = jobData?.my_bid?.status || jobData?.my_bid_status;
 
@@ -594,20 +588,11 @@ export default function JobDetailsScreen() {
       fullResponseData: jobData,
     });
   }
-<<<<<<< HEAD
 
-  // Check if user has already bid on this job
-  const hasUserBid = jobData?.already_bidded || jobData?.my_bid;
+  // Additional bid information
   const userBidAmount = jobData?.my_bid?.amount || jobData?.my_bid_amount;
-  const userBidStatus = jobData?.my_bid?.status || jobData?.my_bid_status;
   const userBidCurrency =
     jobData?.my_bid?.currencies || jobData?.my_bid_currency;
-=======
-  
-  // Check if user has already bid on this job - additional values
-  const userBidAmount = jobData?.my_bid?.amount || jobData?.my_bid_amount;
-  const userBidCurrency = jobData?.my_bid?.currencies || jobData?.my_bid_currency;
->>>>>>> 8d776984 (register)
 
   // Function to get currency symbol
   const getCurrencySymbol = (currencyCode: string) => {
@@ -739,7 +724,6 @@ export default function JobDetailsScreen() {
         return;
       }
 
-<<<<<<< HEAD
       // Show action sheet for camera or gallery
       Alert.alert("Select Photo", "Choose an option", [
         {
@@ -792,23 +776,6 @@ export default function JobDetailsScreen() {
     } catch (error) {
       console.error("Error picking image:", error);
       Alert.alert("Error", "Failed to pick image");
-=======
-      // Launch camera directly
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setCheckInPhoto(result.assets[0].uri);
-        setCheckInPhotoFile(result.assets[0]);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo');
->>>>>>> 8d776984 (register)
     }
   };
 
@@ -1164,7 +1131,6 @@ export default function JobDetailsScreen() {
         </HapticPressable>
         <Text style={styles.headerTitle}>Job Details</Text>
         <View style={styles.headerRight}>
-<<<<<<< HEAD
           {hasUserBid &&
             (String(userBidStatus).toLowerCase() === "accepted" ||
               String(userBidStatus) === "2") && (
@@ -1180,26 +1146,6 @@ export default function JobDetailsScreen() {
                 </Text>
               </HapticPressable>
             )}
-=======
-          {hasUserBid && (String(userBidStatus).toLowerCase() === 'accepted' || String(userBidStatus) === '2') && (
-            <View style={styles.checkInButtonContainer}>
-              <HapticPressable
-                style={[styles.checkInButton, !canCheckIn && styles.checkInButtonDisabled]}
-                onPress={handleCheckInPress}
-                disabled={isCheckingIn || !canCheckIn}
-                hapticType={HapticType.Medium}
-              >
-                <Ionicons name="log-in-outline" size={18} color={canCheckIn ? "#065F46" : "#9CA3AF"} />
-                <Text style={[styles.checkInButtonText, !canCheckIn && styles.checkInButtonTextDisabled]}>
-                  {isCheckingIn ? 'Checking in…' : 'Check-in'}
-                </Text>
-              </HapticPressable>
-              {!canCheckIn && getCheckInStatusMessage() && (
-                <Text style={styles.checkInStatusMessage}>{getCheckInStatusMessage()}</Text>
-              )}
-            </View>
-          )}
->>>>>>> 8d776984 (register)
         </View>
       </View>
 
@@ -1350,7 +1296,7 @@ export default function JobDetailsScreen() {
 
         {/* Location Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Locationnn</Text>
+          <Text style={styles.sectionTitle}>Location</Text>
           <View style={styles.locationContainer}>
             <View style={styles.locationHeader}>
               <Ionicons name="location-outline" size={20} color="#3B82F6" />
@@ -1409,37 +1355,45 @@ export default function JobDetailsScreen() {
                 <>
                   {/* Embedded Map with Marker (matching React Leaflet implementation) */}
                   <View style={styles.mapContainer}>
-                    <MapView
-                      provider={PROVIDER_DEFAULT}
-                      style={styles.embeddedMap}
-                      initialRegion={{
-                        latitude: validLatitude,
-                        longitude: validLongitude,
-                        latitudeDelta: 0.05,
-                        longitudeDelta: 0.05,
-                      }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      pitchEnabled={false}
-                      rotateEnabled={false}
+                    <Pressable
                       onPress={() => {
                         // Open in full map view when tapped
                         Linking.openURL(osmViewUrl);
                       }}
+                      style={styles.embeddedMap}
                     >
-                      <Marker
-                        coordinate={{
-                          latitude: validLatitude,
-                          longitude: validLongitude,
-                        }}
-                        title={job?.vendor_location || job?.supplier_location || "Location"}
-                        description={`${validLatitude}, ${validLongitude}`}
-                      />
-                    </MapView>
-                    {/* Overlay tap hint */}
-                    <View style={styles.mapOverlay}>
-                      <Text style={styles.mapOverlayText}>Tap to open in full map</Text>
-                    </View>
+                      {MapView ? (
+                        <MapView
+                          style={styles.embeddedMap}
+                          initialCameraPosition={{
+                            latitude: validLatitude,
+                            longitude: validLongitude,
+                            zoom: 15,
+                          }}
+                          scrollEnabled={false}
+                          zoomEnabled={false}
+                          pitchEnabled={false}
+                          rotateEnabled={false}
+                          markers={[
+                            {
+                              latitude: validLatitude,
+                              longitude: validLongitude,
+                              title: job?.vendor_location || job?.supplier_location || "Location",
+                              description: `${validLatitude}, ${validLongitude}`,
+                            },
+                          ]}
+                        />
+                      ) : (
+                        <View style={[styles.embeddedMap, { backgroundColor: "#E5E7EB", justifyContent: "center", alignItems: "center" }]}>
+                          <Ionicons name="map-outline" size={48} color="#6B7280" />
+                          <Text style={{ marginTop: 8, color: "#6B7280" }}>Map View</Text>
+                        </View>
+                      )}
+                      {/* Overlay tap hint */}
+                      <View style={styles.mapOverlay}>
+                        <Text style={styles.mapOverlayText}>Tap to open in full map</Text>
+                      </View>
+                    </Pressable>
                   </View>
                   
                   {/* Get Directions Button */}
@@ -2014,9 +1968,7 @@ export default function JobDetailsScreen() {
               <Text style={[styles.sectionTitle, { color: "#065F46" }]}>
                 Bid Accepted
               </Text>
-              <Text style={{ color: "#065F46", fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat', lineHeight: 22 }}>
+              <Text style={{ color: "#065F46", fontSize: 16, lineHeight: 22 }}>
                 Your bid has been accepted. You will receive the output documents
                 and assignment instructions for review shortly.
               </Text>
@@ -2296,7 +2248,6 @@ fontFamily: 'Montserrat', lineHeight: 22 }}>
         </View>
       </Modal>
 
-<<<<<<< HEAD
       {/* Check-in Modal */}
       <Modal
         visible={showCheckInModal}
@@ -2305,36 +2256,21 @@ fontFamily: 'Montserrat', lineHeight: 22 }}>
         onRequestClose={() => setShowCheckInModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.checkInModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Check In Details</Text>
-              <HapticPressable
-                onPress={() => setShowCheckInModal(false)}
-                hapticType={HapticType.Light}
-              >
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </HapticPressable>
-=======
-          {/* Check-in Modal */}
-          <Modal
-            visible={showCheckInModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowCheckInModal(false)}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardAvoidingView}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
           >
-            <View style={styles.modalOverlay}>
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardAvoidingView}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-              >
-                <View style={styles.checkInModalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Check In Details</Text>
-                  <HapticPressable onPress={() => setShowCheckInModal(false)} hapticType={HapticType.Light}>
-                    <Ionicons name="close" size={24} color="#6B7280" />
-                  </HapticPressable>
-                </View>
+            <View style={styles.checkInModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Check In Details</Text>
+                <HapticPressable
+                  onPress={() => setShowCheckInModal(false)}
+                  hapticType={HapticType.Light}
+                >
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </HapticPressable>
+              </View>
 
                 <ScrollView 
                   style={styles.checkInModalScroll} 
@@ -2412,100 +2348,10 @@ fontFamily: 'Montserrat', lineHeight: 22 }}>
                     </HapticPressable>
                   )}
                 </ScrollView>
-                </View>
-              </KeyboardAvoidingView>
->>>>>>> 8d776984 (register)
-            </View>
-
-            <ScrollView
-              style={styles.checkInModalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Location Display */}
-              {isLocationFetched && fetchedLocation?.address && (
-                <View style={styles.checkInSection}>
-                  <Text style={styles.checkInLabel}>Current Location:</Text>
-                  <Text style={styles.checkInLocationText}>
-                    {fetchedLocation.address}
-                  </Text>
-                </View>
-              )}
-
-              {/* Check-in Note */}
-              <View style={styles.checkInSection}>
-                <Text style={styles.checkInLabel}>
-                  Enter Check In Note (Optional)
-                </Text>
-                <TextInput
-                  style={styles.checkInNoteInput}
-                  value={checkInNote}
-                  onChangeText={setCheckInNote}
-                  placeholder="Enter Check In Note (Optional)"
-                  placeholderTextColor="#9CA3AF"
-                  multiline
-                  numberOfLines={3}
-                />
               </View>
-
-              {/* Photo Upload */}
-              <View style={styles.checkInSection}>
-                <Text style={styles.checkInLabel}>Upload Check In Photo</Text>
-
-                {checkInPhoto && (
-                  <View style={styles.photoPreviewContainer}>
-                    <Image
-                      source={{ uri: checkInPhoto }}
-                      style={styles.photoPreview}
-                    />
-                    <HapticPressable
-                      style={styles.removePhotoButton}
-                      onPress={() => {
-                        setCheckInPhoto(null);
-                        setCheckInPhotoFile(null);
-                      }}
-                      hapticType={HapticType.Light}
-                    >
-                      <Ionicons name="close-circle" size={24} color="#EF4444" />
-                    </HapticPressable>
-                  </View>
-                )}
-
-                <HapticPressable
-                  style={styles.uploadPhotoButton}
-                  onPress={handleCheckInPhotoUpload}
-                  hapticType={HapticType.Medium}
-                >
-                  <Ionicons name="camera-outline" size={24} color="#15416E" />
-                  <Text style={styles.uploadPhotoButtonText}>
-                    {checkInPhoto ? "Change Photo" : "Take Photo"}
-                  </Text>
-                </HapticPressable>
-              </View>
-
-              {/* Submit Button - Only show when photo is uploaded */}
-              {(checkInPhoto || checkInPhotoFile) && (
-                <HapticPressable
-                  style={[
-                    styles.submitCheckInButton,
-                    isCheckingIn && styles.submitCheckInButtonDisabled,
-                  ]}
-                  onPress={handleSubmitCheckIn}
-                  disabled={isCheckingIn}
-                  hapticType={HapticType.Medium}
-                >
-                  {isCheckingIn ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.submitCheckInButtonText}>
-                      Submit Check In
-                    </Text>
-                  )}
-                </HapticPressable>
-              )}
-            </ScrollView>
+            </KeyboardAvoidingView>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
       {/* Calendar Modal */}
       {showDatePicker && (
@@ -2681,8 +2527,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     marginTop: 16,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#6B7280",
   },
   errorContainer: {
@@ -2694,7 +2538,6 @@ fontFamily: 'Montserrat',
   errorTitle: {
     fontFamily: FONTS.bold,
     fontSize: 20,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     marginTop: 16,
     marginBottom: 8,
@@ -2702,8 +2545,6 @@ fontFamily: 'Montserrat',
   errorMessage: {
     fontFamily: FONTS.regular,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#6B7280",
     textAlign: "center",
     marginBottom: 24,
@@ -2718,8 +2559,6 @@ fontFamily: 'Montserrat',
     fontFamily: FONTS.semiBold,
     color: "#FFFFFF",
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
   },
   header: {
     flexDirection: "row",
@@ -2737,7 +2576,6 @@ fontFamily: 'Montserrat',
   headerTitle: {
     fontFamily: FONTS.bold,
     fontSize: 18,
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   headerRight: {
@@ -2748,47 +2586,23 @@ fontFamily: 'Montserrat',
     alignItems: 'flex-end',
   },
   checkInButton: {
-<<<<<<< HEAD
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     backgroundColor: "#D1FAE5",
-    borderWidth: 1,
-    borderColor: "#A7F3D0",
-=======
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#ECFDF5',
->>>>>>> 8d776984 (register)
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#065F46',
+    borderColor: "#A7F3D0",
   },
   checkInButtonDisabled: {
     backgroundColor: '#F3F4F6',
     borderColor: '#D1D5DB',
   },
   checkInButtonText: {
-<<<<<<< HEAD
     fontFamily: FONTS.bold,
     color: "#065F46",
-=======
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#065F46',
-  },
-  checkInButtonTextDisabled: {
-    color: '#9CA3AF',
-  },
-  checkInStatusMessage: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 4,
-    textAlign: 'center',
->>>>>>> 8d776984 (register)
   },
   content: {
     flex: 1,
@@ -2811,7 +2625,6 @@ fontFamily: 'Montserrat',
   jobTitle: {
     fontFamily: FONTS.bold,
     fontSize: 24,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     flex: 1,
     marginRight: 12,
@@ -2824,13 +2637,10 @@ fontFamily: 'Montserrat',
   statusText: {
     fontFamily: FONTS.semiBold,
     fontSize: 12,
-fontFamily: 'Montserrat',
   },
   jobId: {
     fontFamily: FONTS.medium,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#6B7280",
   },
   rfiRow: {
@@ -2852,7 +2662,6 @@ fontFamily: 'Montserrat',
   statBadgeText: {
     fontFamily: FONTS.semiBold,
     fontSize: 12,
-fontFamily: 'Montserrat',
     color: "#3B82F6", // Blue text
   },
   section: {
@@ -2873,7 +2682,6 @@ fontFamily: 'Montserrat',
   },
   sectionTitle: {
     fontSize: 18,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     marginBottom: 16,
   },
@@ -2896,14 +2704,12 @@ fontFamily: 'Montserrat',
   infoLabel: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     flex: 1,
   },
   infoValue: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     flex: 2,
     textAlign: "right",
@@ -2911,16 +2717,12 @@ fontFamily: 'Montserrat',
   scopeText: {
     fontFamily: FONTS.regular,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#374151",
     lineHeight: 24,
   },
   dateText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   dateChipWrap: {
@@ -2946,15 +2748,12 @@ fontFamily: 'Montserrat',
   inputLabel: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
     marginBottom: 8,
   },
   inputHelper: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     marginBottom: 12,
   },
@@ -2972,8 +2771,6 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   currencySelector: {
@@ -2989,8 +2786,6 @@ fontFamily: 'Montserrat',
   currencyText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   amountTypeContainer: {
@@ -3014,16 +2809,12 @@ fontFamily: 'Montserrat',
   amountTypeText: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#6B7280",
   },
   amountTypeTextActive: {
     fontFamily: FONTS.bold,
     color: "#FFFFFF",
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
   },
   datesContainer: {
     flexDirection: "row",
@@ -3045,7 +2836,6 @@ fontFamily: 'Montserrat',
   dateButtonText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#6B7280",
   },
   dateButtonTextActive: {
@@ -3054,7 +2844,6 @@ fontFamily: 'Montserrat',
   noDatesText: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     fontStyle: "italic",
   },
@@ -3067,8 +2856,6 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
     textAlignVertical: "top",
   },
@@ -3102,8 +2889,6 @@ fontFamily: 'Montserrat',
     fontFamily: FONTS.bold,
     color: "#FFFFFF",
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
   },
   locationContainer: {
     gap: 16,
@@ -3116,8 +2901,6 @@ fontFamily: 'Montserrat',
   locationTitle: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   mapContainer: {
@@ -3147,7 +2930,6 @@ fontFamily: 'Montserrat',
   coordinatesText: {
     fontFamily: FONTS.medium,
     fontSize: 12,
-fontFamily: 'Montserrat',
     color: "#047857",
     textAlign: "center",
   },
@@ -3160,7 +2942,6 @@ fontFamily: 'Montserrat',
   mapPlaceholderText: {
     fontFamily: FONTS.semiBold,
     fontSize: 18,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     marginTop: 8,
     marginBottom: 4,
@@ -3168,7 +2949,6 @@ fontFamily: 'Montserrat',
   mapPlaceholderSubtext: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#9CA3AF",
     textAlign: "center",
     lineHeight: 20,
@@ -3188,7 +2968,6 @@ fontFamily: 'Montserrat',
   directionsButtonText: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#047857",
   },
   embeddedMap: {
@@ -3207,7 +2986,6 @@ fontFamily: 'Montserrat',
   mapOverlayText: {
     fontFamily: FONTS.semiBold,
     fontSize: 12,
-fontFamily: 'Montserrat',
     color: "#FFFFFF",
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     paddingHorizontal: 12,
@@ -3220,8 +2998,6 @@ fontFamily: 'Montserrat',
   requirementsText: {
     fontFamily: FONTS.regular,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#374151",
     lineHeight: 24,
   },
@@ -3235,7 +3011,6 @@ fontFamily: 'Montserrat',
   documentsTitle: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     marginBottom: 12,
   },
@@ -3248,7 +3023,6 @@ fontFamily: 'Montserrat',
   documentText: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#374151",
     flex: 1,
   },
@@ -3263,13 +3037,11 @@ fontFamily: 'Montserrat',
   documentMetaLabel: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-fontFamily: 'Montserrat',
     color: "#6B7280",
   },
   documentMetaValue: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   downloadButton: {
@@ -3285,7 +3057,6 @@ fontFamily: 'Montserrat',
     fontFamily: FONTS.bold,
     color: "#FFFFFF",
     fontSize: 14,
-fontFamily: 'Montserrat',
   },
   videoHeader: {
     flexDirection: "row",
@@ -3338,15 +3109,12 @@ fontFamily: 'Montserrat',
   videoEmptyTitle: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#6B7280",
     textAlign: "center",
   },
   videoEmptySubtitle: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#9CA3AF",
     textAlign: "center",
   },
@@ -3373,13 +3141,11 @@ fontFamily: 'Montserrat',
   checkinAddress: {
     fontFamily: FONTS.semiBold,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   checkinMeta: {
     fontFamily: FONTS.regular,
     fontSize: 12,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     marginTop: 2,
   },
@@ -3409,7 +3175,6 @@ fontFamily: 'Montserrat',
   modalTitle: {
     fontFamily: FONTS.bold,
     fontSize: 18,
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   currencyList: {
@@ -3433,21 +3198,17 @@ fontFamily: 'Montserrat',
   currencyCode: {
     fontFamily: FONTS.semiBold,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   currencyName: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     marginTop: 2,
   },
   currencySymbol: {
     fontFamily: FONTS.semiBold,
     fontSize: 18,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     marginRight: 12,
   },
@@ -3466,8 +3227,6 @@ fontFamily: 'Montserrat',
   datePickerButtonText: {
     fontFamily: FONTS.regular,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
     flex: 1,
     marginLeft: 12,
@@ -3490,7 +3249,6 @@ fontFamily: 'Montserrat',
   selectedDateText: {
     fontFamily: FONTS.medium,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   removeDateButton: {
@@ -3500,7 +3258,6 @@ fontFamily: 'Montserrat',
   datePickerInfo: {
     fontFamily: FONTS.regular,
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     textAlign: "center",
     marginVertical: 16,
@@ -3516,8 +3273,6 @@ fontFamily: 'Montserrat',
     fontFamily: FONTS.semiBold,
     color: "#FFFFFF",
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
   },
   datePickerContainer: {
     padding: 20,
@@ -3533,8 +3288,6 @@ fontFamily: 'Montserrat',
   },
   dateInputLabel: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "500",
     color: "#1F2937",
     width: 60,
@@ -3547,8 +3300,6 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
     backgroundColor: "#FFFFFF",
   },
@@ -3569,7 +3320,6 @@ fontFamily: 'Montserrat',
   },
   quickDateButtonText: {
     fontSize: 14,
-fontFamily: 'Montserrat',
     fontWeight: "500",
     color: "#1F2937",
   },
@@ -3589,7 +3339,6 @@ fontFamily: 'Montserrat',
   },
   calendarTitle: {
     fontSize: 18,
-fontFamily: 'Montserrat',
     fontWeight: "bold",
     color: "#1F2937",
   },
@@ -3609,7 +3358,6 @@ fontFamily: 'Montserrat',
   },
   monthYearText: {
     fontSize: 18,
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#1F2937",
   },
@@ -3624,7 +3372,6 @@ fontFamily: 'Montserrat',
     flex: 1,
     textAlign: "center",
     fontSize: 14,
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#6B7280",
     paddingVertical: 8,
@@ -3649,8 +3396,6 @@ fontFamily: 'Montserrat',
   },
   calendarDayText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
   },
   calendarDayTextSelected: {
@@ -3668,7 +3413,6 @@ fontFamily: 'Montserrat',
   },
   selectedDatesTitle: {
     fontSize: 14,
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#1F2937",
     marginBottom: 8,
@@ -3684,7 +3428,6 @@ fontFamily: 'Montserrat',
     paddingVertical: 4,
     borderRadius: 4,
     fontSize: 12,
-fontFamily: 'Montserrat',
     fontWeight: "500",
     color: "#FFFFFF",
   },
@@ -3703,8 +3446,6 @@ fontFamily: 'Montserrat',
   },
   cancelButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#6B7280",
   },
@@ -3718,8 +3459,6 @@ fontFamily: 'Montserrat',
   },
   saveButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#FFFFFF",
   },
@@ -3738,8 +3477,6 @@ fontFamily: 'Montserrat',
   },
   footerStatusText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#92400E",
     textAlign: "center",
@@ -3763,15 +3500,12 @@ fontFamily: 'Montserrat',
   },
   checkInLabel: {
     fontSize: 14,
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#6B7280",
     marginBottom: 8,
   },
   checkInLocationText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "bold",
     color: "#1F2937",
     marginTop: 4,
@@ -3783,8 +3517,6 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
     minHeight: 80,
     textAlignVertical: "top",
@@ -3820,8 +3552,6 @@ fontFamily: 'Montserrat',
   },
   uploadPhotoButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#15416E",
   },
@@ -3838,8 +3568,6 @@ fontFamily: 'Montserrat',
   },
   submitCheckInButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "bold",
     color: "#FFFFFF",
   },
@@ -3856,8 +3584,6 @@ fontFamily: 'Montserrat',
   },
   downloadAssignmentText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#FFFFFF",
   },
@@ -3880,7 +3606,6 @@ fontFamily: 'Montserrat',
   },
   filePickerText: {
     fontSize: 14,
-fontFamily: 'Montserrat',
     fontWeight: "600",
     color: "#6B7280",
   },
@@ -3896,7 +3621,6 @@ fontFamily: 'Montserrat',
   },
   selectedFileName: {
     fontSize: 14,
-fontFamily: 'Montserrat',
     color: "#1F2937",
     fontWeight: "500",
     flex: 1,
@@ -3911,8 +3635,6 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     color: "#1F2937",
     minHeight: 80,
     textAlignVertical: "top",
@@ -3931,8 +3653,6 @@ fontFamily: 'Montserrat',
   },
   submitInspectionButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "bold",
     color: "#FFFFFF",
     textTransform: "uppercase",
@@ -3950,13 +3670,11 @@ fontFamily: 'Montserrat',
   },
   uploadedDocumentIndex: {
     fontSize: 14,
-fontFamily: 'Montserrat',
     fontWeight: "bold",
     color: "#1F2937",
   },
   uploadedDocumentDate: {
     fontSize: 12,
-fontFamily: 'Montserrat',
     color: "#6B7280",
     marginTop: 2,
   },
@@ -3978,8 +3696,6 @@ fontFamily: 'Montserrat',
   },
   confirmProceedButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
     fontWeight: "bold",
     color: "#FFFFFF",
   },

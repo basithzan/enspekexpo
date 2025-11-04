@@ -528,27 +528,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-<<<<<<< HEAD
-fontFamily: 'Montserrat',
-    fontWeight: 'bold',
-    color: '#000000',
-=======
     fontWeight: '700',
     color: '#111827',
->>>>>>> 8d776984 (register)
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-<<<<<<< HEAD
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
-    color: '#000000',
-=======
     color: '#6B7280',
->>>>>>> 8d776984 (register)
     textAlign: 'center',
     marginBottom: 32,
     fontWeight: '400',
@@ -573,12 +561,6 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
-<<<<<<< HEAD
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
-    marginBottom: 16,
-    color: '#000000',
-=======
     color: '#111827',
     fontWeight: '400',
   },
@@ -626,7 +608,6 @@ fontFamily: 'Montserrat',
   },
   typeOptionTextActive: {
     color: '#FFFFFF',
->>>>>>> 8d776984 (register)
   },
   registerButton: {
     backgroundColor: '#3B82F6',
@@ -649,14 +630,8 @@ fontFamily: 'Montserrat',
   registerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-<<<<<<< HEAD
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
-    fontWeight: '600',
-=======
     fontWeight: '700',
     letterSpacing: 0.3,
->>>>>>> 8d776984 (register)
   },
   secondaryActions: {
     alignItems: 'center',
@@ -665,10 +640,6 @@ fontFamily: 'Montserrat',
   linkText: {
     color: '#3B82F6',
     fontSize: 14,
-<<<<<<< HEAD
-fontFamily: 'Montserrat',
-    textDecorationLine: 'underline',
-=======
     fontWeight: '600',
   },
   modalOverlay: {
@@ -720,6 +691,5 @@ fontFamily: 'Montserrat',
     fontSize: 16,
     color: '#111827',
     fontWeight: '400',
->>>>>>> 8d776984 (register)
   },
 });
