@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useViewEnquiry, useEnquiryInvoices, useCreatePaymentIntent } from '../../../src/api/hooks/useEnquiry';
-import { useInspectorRatings } from '../../../src/api/hooks/useClientActions';
+import { useInspectorRatings, useConfirmInspectorSelection } from '../../../src/api/hooks/useClientActions';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { HapticPressable } from '@/components/HapticPressable';
 import { HapticType } from '@/utils/haptics';
@@ -28,6 +28,7 @@ export default function RfiDetails() {
   const { data: enquiryData, isLoading, refetch } = useViewEnquiry(id as string);
   const { data: invoicesData } = useEnquiryInvoices(id as string);
   const createPaymentIntentMutation = useCreatePaymentIntent();
+  const confirmInspectorMutation = useConfirmInspectorSelection();
   
   const singleJob = enquiryData?.data || enquiryData;
   const checkIns = singleJob?.checkIns || [];
@@ -35,8 +36,10 @@ export default function RfiDetails() {
   
   // Reviews modal state
   const [showReviews, setShowReviews] = useState(false);
+  const [selectedInspectorIdForReviews, setSelectedInspectorIdForReviews] = useState<number | string | null>(null);
   const inspector = singleJob?.accepted_bid?.inspector;
-  const inspectorId = inspector?.id || inspector?.inspector_id;
+  // Use selected inspector ID for reviews, or fall back to assigned inspector ID
+  const inspectorIdForReviews = selectedInspectorIdForReviews || inspector?.id || inspector?.inspector_id;
   
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -49,7 +52,7 @@ export default function RfiDetails() {
   const [cardholderName, setCardholderName] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const { data: ratingsData, isLoading: isLoadingRatings, error: ratingsError } = useInspectorRatings(
-    showReviews && inspectorId ? inspectorId : null
+    showReviews && selectedInspectorIdForReviews ? selectedInspectorIdForReviews : null
   );
   
   // Debug: Log the ratings data structure
@@ -62,8 +65,8 @@ export default function RfiDetails() {
     if (ratingsError) {
       console.error('Ratings Error:', ratingsError);
     }
-    console.log('Show Reviews:', showReviews, 'Inspector ID:', inspectorId, 'Loading:', isLoadingRatings);
-  }, [showReviews, ratingsData, ratingsError, inspectorId, isLoadingRatings]);
+    console.log('Show Reviews:', showReviews, 'Inspector ID:', selectedInspectorIdForReviews, 'Loading:', isLoadingRatings);
+  }, [showReviews, ratingsData, ratingsError, selectedInspectorIdForReviews, isLoadingRatings]);
   
   // Try multiple possible data structures
   const ratings = useMemo(() => {
@@ -339,11 +342,13 @@ export default function RfiDetails() {
                 )}
                 
                 {/* Show Reviews Button */}
-                {inspectorId && (
+                {(inspector?.id || inspector?.inspector_id) && (
                   <HapticPressable
                     style={styles.showReviewsButton}
                     onPress={() => {
-                      console.log('Show Reviews clicked, Inspector ID:', inspectorId);
+                      const assignedInspectorId = inspector?.id || inspector?.inspector_id;
+                      console.log('Show Reviews clicked, Inspector ID:', assignedInspectorId);
+                      setSelectedInspectorIdForReviews(assignedInspectorId);
                       setShowReviews(true);
                     }}
                     hapticType={HapticType.Medium}
@@ -590,26 +595,121 @@ export default function RfiDetails() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Shortlisted Inspectors</Text>
             
-            {singleJob.shortlisted_inspectors.map((item: any, idx: number) => (
-              <View key={idx} style={styles.inspectorCard}>
-                {item?.inspector?.profile_pic && (
-                  <Image 
-                    source={{ uri: item.inspector.profile_pic }} 
-                    style={styles.inspectorAvatar}
-                  />
-                )}
-                <View style={styles.inspectorInfo}>
-                  <Text style={styles.inspectorName}>
-                    {item?.inspector?.name || 'N/A'}
-                  </Text>
-                  {item?.inspector?.email && (
-                    <Text style={styles.inspectorEmail}>
-                      {item.inspector.email}
-                    </Text>
-                  )}
+            {singleJob.shortlisted_inspectors.map((item: any, idx: number) => {
+              // Use item.id (shortlisted inspector entry ID) as per web version
+              // This is the ID of the shortlisted inspector entry, not the inspector user ID
+              const shortlistedInspectorId = item?.id;
+              const inspectorUserId = item?.inspector?.id;
+              return (
+                <View key={idx} style={styles.shortlistedInspectorContainer}>
+                  <View style={styles.inspectorCard}>
+                    {item?.inspector?.profile_pic && (
+                      <Image 
+                        source={{ uri: item.inspector.profile_pic }} 
+                        style={styles.inspectorAvatar}
+                      />
+                    )}
+                    <View style={styles.inspectorInfo}>
+                      <View style={styles.inspectorInfoHeader}>
+                        <View style={styles.inspectorInfoText}>
+                          <Text style={styles.inspectorName}>
+                            {item?.inspector?.name || 'N/A'}
+                          </Text>
+                          {item?.inspector?.email && (
+                            <Text style={styles.inspectorEmail}>
+                              {item.inspector.email}
+                            </Text>
+                          )}
+                        </View>
+                        
+                        {/* Action Buttons - Top Right */}
+                        <View style={styles.shortlistedInspectorActions}>
+                          {/* Show Reviews Button */}
+                          {inspectorUserId && (
+                            <HapticPressable
+                              style={styles.showReviewsButton}
+                              onPress={() => {
+                                setSelectedInspectorIdForReviews(inspectorUserId);
+                                setShowReviews(true);
+                              }}
+                              hapticType={HapticType.Medium}
+                            >
+                              <Ionicons name="star-outline" size={14} color="#3B82F6" />
+                              <Text style={styles.showReviewsButtonText}>Reviews</Text>
+                            </HapticPressable>
+                          )}
+                          
+                          {/* Confirm Inspector Button */}
+                          <HapticPressable
+                            style={[
+                              styles.confirmInspectorButton,
+                              confirmInspectorMutation.isPending && styles.confirmInspectorButtonDisabled
+                            ]}
+                            onPress={async () => {
+                              if (!shortlistedInspectorId) {
+                                Alert.alert('Error', 'Inspector ID is missing');
+                                return;
+                              }
+                              
+                              // Ensure ID is a number
+                              const inspectorIdToSend = Number(shortlistedInspectorId);
+                              if (isNaN(inspectorIdToSend)) {
+                                Alert.alert('Error', 'Invalid inspector ID');
+                                return;
+                              }
+                              
+                              // Log for debugging
+                              console.log('Confirming inspector with ID:', inspectorIdToSend);
+                              console.log('Shortlisted inspector item:', JSON.stringify(item, null, 2));
+                              
+                              try {
+                                await confirmInspectorMutation.mutateAsync({
+                                  accepted_inspector_id: inspectorIdToSend,
+                                });
+                                Alert.alert(
+                                  'Success',
+                                  'Inspector confirmed successfully!',
+                                  [
+                                    {
+                                      text: 'OK',
+                                      onPress: () => {
+                                        refetch();
+                                      },
+                                    },
+                                  ]
+                                );
+                              } catch (error: any) {
+                                console.error('Confirm inspector error:', error);
+                                console.error('Error response:', error?.response?.data);
+                                const errorMessage = error?.response?.data?.message || 
+                                                   error?.response?.data?.error || 
+                                                   error?.message || 
+                                                   'Failed to confirm inspector. Please try again.';
+                                Alert.alert(
+                                  'Error',
+                                  errorMessage
+                                );
+                              }
+                            }}
+                            disabled={confirmInspectorMutation.isPending}
+                            hapticType={HapticType.Medium}
+                          >
+                            {confirmInspectorMutation.isPending ? (
+                              <ActivityIndicator color="#FFFFFF" size="small" />
+                            ) : (
+                              <>
+                                <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+                                <Text style={styles.confirmInspectorButtonText}>Confirm</Text>
+                              </>
+                            )}
+                          </HapticPressable>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -621,14 +721,20 @@ export default function RfiDetails() {
         visible={showReviews}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowReviews(false)}
+        onRequestClose={() => {
+          setShowReviews(false);
+          setSelectedInspectorIdForReviews(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Inspector Reviews</Text>
               <HapticPressable
-                onPress={() => setShowReviews(false)}
+                onPress={() => {
+                  setShowReviews(false);
+                  setSelectedInspectorIdForReviews(null);
+                }}
                 style={styles.modalCloseButton}
                 hapticType={HapticType.Light}
               >
@@ -1271,6 +1377,15 @@ fontFamily: 'Montserrat',
   inspectorInfo: {
     flex: 1,
   },
+  inspectorInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  inspectorInfoText: {
+    flex: 1,
+    marginRight: 8,
+  },
   inspectorName: {
     fontSize: 16,
     fontWeight: '600',
@@ -1435,15 +1550,13 @@ fontFamily: 'Montserrat',
   showReviewsButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#DBEAFE',
-    marginTop: 12,
-    alignSelf: 'flex-start',
   },
   showReviewsButtonText: {
     fontSize: 12,
@@ -1651,6 +1764,33 @@ fontFamily: 'Montserrat',
   },
   submitPaymentButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  shortlistedInspectorContainer: {
+    marginBottom: 16,
+  },
+  shortlistedInspectorActions: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'flex-start',
+  },
+  confirmInspectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#10B981',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  confirmInspectorButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
+  },
+  confirmInspectorButtonText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },

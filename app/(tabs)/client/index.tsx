@@ -85,7 +85,7 @@ export default function ClientHome(){
 
           {/* My Requests Section */}
           <View style={styles.rfiSection}>
-            <SectionHeader title='My Requests' actionLabel='View all' onAction={()=>router.push('/(tabs)/client/my-rfis')} />
+            <SectionHeader title='My Requests' actionLabel='View all' onAction={()=>router.push('/(tabs)/my-requests')} />
             {isLoading ? (
               <SkeletonList />
             ) : requests?.length ? (
@@ -136,10 +136,42 @@ function RfiCard({ item, onPress }:{ item:any; onPress:()=>void }){
   );
 }
 
-function StatusPill({ value }:{ value:string }){
-  const map: Record<string, string> = { Open: '#3B82F6', 'In-Progress': '#F59E0B', Completed: '#10B981', Closed: '#6B7280' };
-  const color = map[value] || '#3B82F6';
-  return (<View style={styles.statusPill}><Text style={[styles.statusText, { color }]}>{value}</Text></View>);
+function StatusPill({ value }:{ value:string | number }){
+  // Map numeric status codes to labels and colors (based on web version)
+  const getStatusInfo = (status: string | number) => {
+    const statusNum = typeof status === 'number' ? status : parseInt(String(status));
+    const statusStr = String(status).toLowerCase();
+    
+    // Handle numeric status codes
+    if (statusNum === 0) return { label: 'Awarded', color: '#F59E0B' };
+    if (statusNum === 1) return { label: 'Voided', color: '#F59E0B' };
+    if (statusNum === 2) return { label: 'Rejected', color: '#EF4444' };
+    if (statusNum === 3) return { label: 'In Process', color: '#EF4444' };
+    if (statusNum === 4) return { label: 'No Response', color: '#EF4444' };
+    if (statusNum === 5) return { label: 'Completed', color: '#10B981' };
+    if (statusNum === 6) return { label: 'Cancelled', color: '#EF4444' };
+    
+    // Handle string status values
+    if (statusStr === 'open') return { label: 'Open', color: '#3B82F6' };
+    if (statusStr === 'in-progress' || statusStr === 'in process') return { label: 'In Progress', color: '#F59E0B' };
+    if (statusStr === 'completed') return { label: 'Completed', color: '#10B981' };
+    if (statusStr === 'closed') return { label: 'Closed', color: '#6B7280' };
+    if (statusStr === 'awarded') return { label: 'Awarded', color: '#F59E0B' };
+    if (statusStr === 'voided') return { label: 'Voided', color: '#F59E0B' };
+    if (statusStr === 'rejected') return { label: 'Rejected', color: '#EF4444' };
+    if (statusStr === 'no response') return { label: 'No Response', color: '#EF4444' };
+    if (statusStr === 'cancelled') return { label: 'Cancelled', color: '#EF4444' };
+    
+    // Default fallback
+    return { label: String(status), color: '#3B82F6' };
+  };
+  
+  const statusInfo = getStatusInfo(value);
+  return (
+    <View style={styles.statusPill}>
+      <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
+    </View>
+  );
 }
 
 function SkeletonList(){
