@@ -113,9 +113,16 @@ export default function JobDetailsScreen() {
             if (!isNaN(date.getTime())) return date;
           }
           
-          // Fallback to ISO format or other formats
+          // Try YYYY-MM-DD format
+          if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) return date;
+          }
+          
+          // Try full date string format (e.g., "November 6, 2025")
           const date = new Date(dateStr);
           if (!isNaN(date.getTime())) return date;
+          
           return null;
         })
         .filter((date): date is Date => date !== null);
@@ -125,23 +132,6 @@ export default function JobDetailsScreen() {
     }
   }, []);
 
-  // Check if today is an available check-in date
-  const isTodayAvailableForCheckIn = useCallback((): boolean => {
-    const availability = jobData?.my_bid?.availability || jobData?.accepted_bid?.availability;
-    if (!availability) return false;
-    
-    const availableDates = parseAvailabilityDates(availability);
-    if (availableDates.length === 0) return false;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    return availableDates.some(date => {
-      const availableDate = new Date(date);
-      availableDate.setHours(0, 0, 0, 0);
-      return availableDate.getTime() === today.getTime();
-    });
-  }, [jobData, parseAvailabilityDates]);
 
   // Check if user has already checked in today
   const hasCheckedInToday = useCallback((): boolean => {
@@ -382,6 +372,50 @@ export default function JobDetailsScreen() {
     }
   }, [jobData]);
 
+  // Check if today is an available check-in date (defined after jobData query)
+  const isTodayAvailableForCheckIn = useCallback((): boolean => {
+    if (!jobData) return false;
+    
+    // First check bid availability dates
+    let availability = jobData?.my_bid?.availability || jobData?.accepted_bid?.availability;
+    let availableDates: Date[] = [];
+    
+    if (availability) {
+      availableDates = parseAvailabilityDates(availability);
+    }
+    
+    // If no availability dates from bid, check estimated inspection dates as fallback
+    if (availableDates.length === 0) {
+      const estDates = jobData?.enquiry?.est_inspection_date || 
+                       jobData?.est_inspection_date || 
+                       jobData?.inspection_dates || 
+                       jobData?.est_dates;
+      if (estDates) {
+        availableDates = parseAvailabilityDates(estDates);
+      }
+    }
+    
+    if (availableDates.length === 0) return false;
+    
+    // Get today's date in local timezone, normalized to midnight
+    const today = new Date();
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth();
+    const todayDay = today.getDate();
+    const todayNormalized = new Date(todayYear, todayMonth, todayDay);
+    
+    // Check if today matches any available date
+    return availableDates.some(date => {
+      const availableDate = new Date(date);
+      const availableYear = availableDate.getFullYear();
+      const availableMonth = availableDate.getMonth();
+      const availableDay = availableDate.getDate();
+      const availableNormalized = new Date(availableYear, availableMonth, availableDay);
+      
+      return availableNormalized.getTime() === todayNormalized.getTime();
+    });
+  }, [jobData, parseAvailabilityDates]);
+
   // Check if user has already bid on this job
   const hasUserBid = jobData?.already_bidded || jobData?.my_bid;
   const userBidStatus = jobData?.my_bid?.status || jobData?.my_bid_status;
@@ -408,25 +442,45 @@ export default function JobDetailsScreen() {
       return 'Already checked in today';
     }
 
-    const availability = jobData?.my_bid?.availability || jobData?.accepted_bid?.availability;
-    if (!availability) {
-      return 'No check-in dates available';
+    // First check bid availability dates
+    let availability = jobData?.my_bid?.availability || jobData?.accepted_bid?.availability;
+    let availableDates: Date[] = [];
+    
+    if (availability) {
+      availableDates = parseAvailabilityDates(availability);
+    }
+    
+    // If no availability dates from bid, check estimated inspection dates as fallback
+    if (availableDates.length === 0) {
+      const estDates = jobData?.enquiry?.est_inspection_date || 
+                       jobData?.est_inspection_date || 
+                       jobData?.inspection_dates || 
+                       jobData?.est_dates;
+      if (estDates) {
+        availableDates = parseAvailabilityDates(estDates);
+      }
     }
 
-    const availableDates = parseAvailabilityDates(availability);
     if (availableDates.length === 0) {
       return 'No check-in dates available';
     }
 
+    // Get today's date in local timezone, normalized to midnight
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth();
+    const todayDay = today.getDate();
+    const todayNormalized = new Date(todayYear, todayMonth, todayDay);
     
     // Find the next available date
     const sortedDates = availableDates.sort((a, b) => a.getTime() - b.getTime());
     const nextDate = sortedDates.find(date => {
       const availableDate = new Date(date);
-      availableDate.setHours(0, 0, 0, 0);
-      return availableDate.getTime() >= today.getTime();
+      const availableYear = availableDate.getFullYear();
+      const availableMonth = availableDate.getMonth();
+      const availableDay = availableDate.getDate();
+      const availableNormalized = new Date(availableYear, availableMonth, availableDay);
+      return availableNormalized.getTime() >= todayNormalized.getTime();
     });
 
     if (!nextDate) {
