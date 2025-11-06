@@ -727,7 +727,7 @@ export default function JobDetailsScreen() {
       }
 
       const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Highest,
       });
       let addressText = "";
       try {
@@ -778,58 +778,21 @@ export default function JobDetailsScreen() {
         return;
       }
 
-      // Show action sheet for camera or gallery
-      Alert.alert("Select Photo", "Choose an option", [
-        {
-          text: "Camera",
-          onPress: async () => {
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.8,
-            });
+      // Directly launch camera without showing options
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-            if (!result.canceled && result.assets[0]) {
-              setCheckInPhoto(result.assets[0].uri);
-              setCheckInPhotoFile(result.assets[0]);
-            }
-          },
-        },
-        {
-          text: "Gallery",
-          onPress: async () => {
-            const { status: libraryStatus } =
-              await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (libraryStatus !== "granted") {
-              Alert.alert(
-                "Permission Required",
-                "Photo library permission is needed."
-              );
-              return;
-            }
-
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-              setCheckInPhoto(result.assets[0].uri);
-              setCheckInPhotoFile(result.assets[0]);
-            }
-          },
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]);
+      if (!result.canceled && result.assets[0]) {
+        setCheckInPhoto(result.assets[0].uri);
+        setCheckInPhotoFile(result.assets[0]);
+      }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image");
+      Alert.alert("Error", "Failed to open camera. Please try again.");
     }
   };
 
