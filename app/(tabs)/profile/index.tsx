@@ -446,7 +446,7 @@ export default function ProfileScreen() {
       subtitle: 'Update your personal information',
       icon: 'person-outline',
       color: '#3B82F6',
-      onPress: () => router.push('/(modals)/edit-profile')
+      onPress: () => router.push('/(modals)/edit-inspector-profile')
     },
     {
       id: 'notifications',

@@ -16,15 +16,15 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.enspek.app",
-      "appleTeamId": "K2N64A7DFR"
+      "bundleIdentifier": "com.enspek",
+      "appleTeamId": "798YG2XXNH"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B0B0C"
       },
-      "package": "com.enspek.app"
+      "package": "com.enspek"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -9,7 +9,7 @@ PODS:
   - EXJSONUtils (0.15.0)
   - EXManifests (1.0.8):
     - ExpoModulesCore
-  - Expo (54.0.21):
+  - Expo (54.0.18):
     - ExpoModulesCore
     - hermes-engine
     - RCTRequired
@@ -44,7 +44,7 @@ PODS:
     - ExpoModulesCore
   - ExpoHaptics (15.0.7):
     - ExpoModulesCore
-  - ExpoHead (6.0.14):
+  - ExpoHead (6.0.13):
     - ExpoModulesCore
     - RNScreens
   - ExpoImagePicker (17.0.8):
@@ -57,7 +57,7 @@ PODS:
     - ExpoModulesCore
   - ExpoMaps (0.12.8):
     - ExpoModulesCore
-  - ExpoModulesCore (3.0.23):
+  - ExpoModulesCore (3.0.22):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1397,9 +1397,9 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-  - react-native-maps (1.26.18):
-    - react-native-maps/Maps (= 1.26.18)
-  - react-native-maps/Generated (1.26.18):
+  - react-native-maps (1.26.17):
+    - react-native-maps/Maps (= 1.26.17)
+  - react-native-maps/Generated (1.26.17):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1421,7 +1421,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-maps/Maps (1.26.18):
+  - react-native-maps/Maps (1.26.17):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1444,7 +1444,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.6.2):
+  - react-native-safe-area-context (5.6.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1456,8 +1456,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.6.2)
-    - react-native-safe-area-context/fabric (= 5.6.2)
+    - react-native-safe-area-context/common (= 5.6.1)
+    - react-native-safe-area-context/fabric (= 5.6.1)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1468,7 +1468,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.6.2):
+  - react-native-safe-area-context/common (5.6.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1490,7 +1490,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.6.2):
+  - react-native-safe-area-context/fabric (5.6.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2254,19 +2254,19 @@ SPEC CHECKSUMS:
   EXImageLoader: e501c001bc40b8326605e82e6e80363c80fe06b5
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: 7469efed75d694ce3c43a6da9c6f3886f66d3c26
-  Expo: 795e9f87aca407bf92895d54ae5f7777fc1f3fbc
+  Expo: d0a7ca2b78dc5b67530c8627fe37440927701212
   ExpoAsset: 3c3b7dd9b1318846a02ef05ce420e63d542aeb9f
   ExpoDocumentPicker: dbe4eeeb771891209fee044a6b0bafbd1fdcc4fa
   ExpoFileSystem: 56f081328f5b48a6dcc8302eee51d4f2d9d0049b
   ExpoFont: b881d43057dceb7b31ff767b24f612609e80f60f
   ExpoHaptics: b48d913e7e5f23816c6f130e525c9a6501b160b5
-  ExpoHead: aa5f5a8afaa9bd4969bfdd6d5b76681e2490fe5b
+  ExpoHead: 4c455257904ca03439313df0d91292b7af1fd6ee
   ExpoImagePicker: bd0a5c81d7734548f6908a480609257e85d19ea8
   ExpoKeepAwake: 3f5e3ac53627849174f3603271df8e08f174ed4a
   ExpoLinking: f5c171877e118e792cb9a77e5ade0b080d899b14
   ExpoLocation: 1dc9e4c06ef66ed081348a11eb637d1dfecc7d61
   ExpoMaps: 62bba038bb8c2af73ccdf16cb765acd593fe3eab
-  ExpoModulesCore: ed46799cfdf75784ee3ca37dac982c5298683e83
+  ExpoModulesCore: 08a1e47dfb85e295c67ecc98da58317d66f64818
   ExpoSplashScreen: 9d2ff8fa08f2c00336a83f93bebffed3a8312519
   EXStructuredHeaders: c951e77f2d936f88637421e9588c976da5827368
   EXUpdates: ef3bdc2cd2a1e023c3ade1b68a1491ff8e4768c8
@@ -2307,8 +2307,8 @@ SPEC CHECKSUMS:
   React-logger: c3e2f8a2e284341205f61eef3d4677ab5a309dfd
   React-Mapbuffer: 603c18db65844bb81dbe62fee8fcc976eaeb7108
   React-microtasksnativemodule: d77e0c426fce34c23227394c96ca1033b30c813c
-  react-native-maps: 8d7c6e959f6ebbdc565d2821f6db9cb3a5b711f7
-  react-native-safe-area-context: 53f796cb6c814661bbe99fbdfd0585d07b996cdd
+  react-native-maps: cde61b0a06a405cf1281a71758330763e346add6
+  react-native-safe-area-context: add9b4ba236fe95ec600604d0fc72f395433dd59
   react-native-webview: a0107c12442bf2ac454d509f615daef00f34df47
   React-NativeModulesApple: 1664340b8750d64e0ef3907c5e53d9481f74bcbd
   React-oscompat: ce47230ed20185e91de62d8c6d139ae61763d09c

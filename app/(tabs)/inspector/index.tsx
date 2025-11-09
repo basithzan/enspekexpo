@@ -265,13 +265,26 @@ export default function InspectorHome(){
   const insets = useSafeAreaInsets();
 
   // Role-based access control
+  console.log('🔍 Inspector Home - Auth Check:', {
+    isAuthenticated,
+    userType: user?.type,
+    userId: user?.id,
+    userName: user?.name,
+    fullUser: user
+  });
+  
   if (!isAuthenticated) {
+    console.log('❌ Not authenticated, redirecting to role-selection');
     return <Redirect href="/role-selection" />;
   }
 
   if (user?.type !== 'inspector') {
+    console.log('❌ Invalid user type:', user?.type, '- Expected: inspector');
     return <Redirect href="/role-selection" />;
   }
+  
+  console.log('✅ Auth check passed - User is inspector');
+
 
   const openJob = useCallback((id: string|number)=>{
     console.log('🔍 Navigation Debug - Opening job:', { id, type: typeof id });
@@ -1247,8 +1260,7 @@ fontFamily: 'Montserrat',
   continueTitle: {
     color: '#1F2937',
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '600',
     marginBottom: 4,
   },

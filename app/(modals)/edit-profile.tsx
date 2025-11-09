@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { useProfile } from '../../src/api/hooks/useProfile';
 import { apiClient } from '../../src/api/client';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'https://erpbeta.enspek.com';
 
@@ -40,7 +41,7 @@ export default function EditProfileScreen() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastApiCallRef = useRef<number>(0);
   const countriesApiThrottleRef = useRef<number>(0);
 
@@ -82,41 +83,17 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        name: user.name || user.client_details?.name || '',
+      // Initialize with basic user data from AuthContext
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
         email: user.email || '',
-        phone: user.phone || user.client_details?.phone || user.client_details?.mobile || '',
-        company_name: user.company_name || user.client_details?.company_name || '',
-        company_size: user.client_details?.company_size || '',
-        industry: user.client_details?.industry || '',
-        country_id: user.country_id || user.client_details?.country?.id || 0,
-        date_of_birth: '',
-        location: '',
-        address: '',
-        city: user.client_details?.city || '',
-        state: '',
-        postal_code: '',
-        website: '',
-        linkedin: '',
-        bio: user.client_details?.bio || '',
-        nationality: '',
-        specialization: '',
-        experience_years: '',
-        certifications: '',
-        languages: '',
-        availability: '',
-        hourly_rate: '',
-        currency: 'USD',
-        cost_type: '',
-        cost: '',
-      });
+        phone: user.phone || '',
+        company_name: user.company_name || '',
+        country_id: user.country_id || 0,
+      }));
       
-      if (user?.client_details?.avatar) {
-        const avatarUrl = user.client_details.avatar;
-        setAvatar(avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`);
-      }
-      
-      // Fetch user profile data
+      // Fetch full profile data from API
       fetchUserProfile();
     }
     loadCountries();
@@ -154,9 +131,8 @@ export default function EditProfileScreen() {
   }, []);
 
   const fetchUserProfile = async () => {
-    if (isLoadingProfile) return; // Prevent duplicate calls
+    if (isLoadingProfile) return;
     
-    // Rate limiting: prevent API calls more than once every 2 seconds
     const now = Date.now();
     if (now - lastApiCallRef.current < 2000) {
       return;
@@ -167,30 +143,52 @@ export default function EditProfileScreen() {
       setIsLoadingProfile(true);
       
       if (user?.type === 'client') {
-        // For clients, profile data is already in user object, just update form
-        if (user?.client_details) {
-          setFormData(prev => ({
-            ...prev,
-            name: user.client_details.name || user.name || prev.name,
-            phone: user.client_details.phone || user.client_details.mobile || user.phone || prev.phone,
-            company_name: user.client_details.company_name || prev.company_name,
-            company_size: user.client_details.company_size || prev.company_size,
-            city: user.client_details.city || prev.city,
-            industry: user.client_details.industry || prev.industry,
-            bio: user.client_details.bio || prev.bio,
-            country_id: user.client_details.country?.id || user.country_id || prev.country_id,
-          }));
+        // For clients, the profile data should already be in AsyncStorage from login
+        // Just re-read it from AsyncStorage to ensure we have the latest data
+        const userData = await AsyncStorage.getItem('user_data');
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          console.log('Client user data from storage:', parsedUser);
           
-          if (user.client_details.avatar) {
-            const avatarUrl = user.client_details.avatar;
-            setAvatar(avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`);
+          // If we have client_details in stored data, use it
+          if (parsedUser.client_details) {
+            const details = parsedUser.client_details;
+            
+            setFormData(prev => ({
+              ...prev,
+              name: details.name || parsedUser.name || prev.name,
+              email: details.email || parsedUser.email || prev.email,
+              phone: details.phone || parsedUser.phone || details.mobile || prev.phone,
+              company_name: details.company_name || parsedUser.company_name || prev.company_name,
+              company_size: details.company_size || prev.company_size,
+              city: details.city || prev.city,
+              industry: details.industry || prev.industry,
+              bio: details.bio || prev.bio,
+              country_id: details.country_id || parsedUser.country_id || details.country?.id || parsedUser.country?.id || prev.country_id,
+            }));
+            
+            // Set avatar if available
+            if (details.avatar || details.profile) {
+              const avatarUrl = details.avatar || details.profile;
+              setAvatar(avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`);
+            }
+            
+            // Set country if available
+            const countryData = details.country || parsedUser.country;
+            if (countryData && countryData.id) {
+              setSelectedCountry({
+                id: Number(countryData.id),
+                name: String(countryData.name || ''),
+                code: countryData.country_code,
+              });
+            }
           }
         }
       } else if (user?.type === 'inspector') {
-        // For inspectors, try multiple endpoints to get profile data
+        // For inspectors, try multiple endpoints
         const endpoints = [
           '/get-inspector-profile',
-          '/update-inspector-data', // Sometimes this endpoint returns profile data
+          '/update-inspector-data',
           '/get-inspector-data'
         ];
         
@@ -205,26 +203,15 @@ export default function EditProfileScreen() {
               break;
             }
           } catch (error) {
+            console.log(`❌ ${endpoint} failed:`, error);
             continue;
           }
         }
         
         if (profileData) {
-          // Extract data from nested structure
           const details = profileData.details || profileData;
           const inspectorDetails = details.inspector_details || {};
           
-          // Update user data in AsyncStorage with the fetched profile information
-          if (details.phone || details.country_id) {
-            // Update the user context
-            await updateUser({
-              phone: details.phone || user.phone,
-              country_id: details.country_id || user.country_id,
-              company_name: details.company_name || user.company_name,
-            });
-          }
-          
-          // Update form data with fetched profile information
           setFormData(prev => ({
             ...prev,
             name: details.name || prev.name,
@@ -253,7 +240,6 @@ export default function EditProfileScreen() {
             cost: inspectorDetails.cost || prev.cost,
           }));
 
-          // If API provides country name, pre-select immediately even before countries load
           const countryName = (details.country_name || details.country?.name || details.countryName);
           if ((details.country_id || user.country_id) && countryName) {
             setSelectedCountry({
@@ -472,19 +458,12 @@ export default function EditProfileScreen() {
         const response = await apiClient.post('/edit-client-data', formDataObj);
 
         if (response.data.success) {
+          // Update user context with new data
           await updateUser({
             name: formData.name,
             phone: formData.phone,
             company_name: formData.company_name,
             country_id: formData.country_id,
-            client_details: {
-              ...user?.client_details,
-              bio: formData.bio,
-              city: formData.city,
-              company_size: formData.company_size,
-              industry: formData.industry,
-              avatar: response.data?.user?.client_details?.avatar || user?.client_details?.avatar,
-            },
           });
 
           Alert.alert('Success', 'Profile updated successfully', [
@@ -565,7 +544,7 @@ export default function EditProfileScreen() {
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         style={[styles.textInput, multiline && styles.multilineInput]}
-        value={formData[field as keyof typeof formData]}
+        value={String(formData[field as keyof typeof formData] || '')}
         onChangeText={(value) => handleInputChange(field, value)}
         placeholder={placeholder}
         placeholderTextColor="#9CA3AF"
@@ -916,8 +895,7 @@ fontFamily: 'Montserrat',
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#1E293B',
     backgroundColor: '#FFFFFF',
   },
@@ -942,8 +920,7 @@ fontFamily: 'Montserrat',
   },
   countryText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#1E293B',
   },
   placeholderText: {
@@ -975,8 +952,7 @@ fontFamily: 'Montserrat',
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '600',
   },
   modalContainer: {
@@ -1012,8 +988,7 @@ fontFamily: 'Montserrat',
   },
   countryName: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#1E293B',
     fontWeight: '500',
   },
@@ -1037,8 +1012,7 @@ fontFamily: 'Montserrat',
   searchInput: {
     flex: 1,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#1E293B',
   },
   noResultsContainer: {
@@ -1047,8 +1021,7 @@ fontFamily: 'Montserrat',
   },
   noResultsText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#64748B',
     fontWeight: '500',
   },

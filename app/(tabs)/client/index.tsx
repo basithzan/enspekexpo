@@ -48,6 +48,8 @@ export default function ClientHome(){
             <View style={styles.locationIcon}>
               <Text style={styles.locationIconText}>📍</Text>
             </View>
+            {console.log(user)
+            }
             <Text style={styles.locationText}>
               {user?.client_details?.country?.name || user?.country?.name || 'Location'}
             </Text>

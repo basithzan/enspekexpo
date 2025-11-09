@@ -68,6 +68,7 @@ export default function JobDetailsScreen() {
   const [checkinsLoading, setCheckinsLoading] = useState(false);
   const [checkins, setCheckins] = useState<any[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [showLocationLoading, setShowLocationLoading] = useState(false);
 
   // Check-in modal states
   const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -221,6 +222,7 @@ export default function JobDetailsScreen() {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
+    const endingDayOfWeek = lastDay.getDay();
 
     const days = [];
 
@@ -233,6 +235,24 @@ export default function JobDetailsScreen() {
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(new Date(year, month, day));
     }
+
+    // Add empty cells after the last day to complete the week
+    // If the month ends on Saturday (6), we don't need to add any
+    // Otherwise, add cells until we reach Saturday
+    const remainingDays = 6 - endingDayOfWeek;
+    for (let i = 0; i < remainingDays; i++) {
+      days.push(null);
+    }
+
+    console.log('📅 Calendar Debug:', {
+      month: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      totalDays: days.length,
+      startingDayOfWeek,
+      endingDayOfWeek,
+      daysInMonth,
+      firstFewDays: days.slice(0, 10).map(d => d ? d.getDate() : 'null'),
+      lastFewDays: days.slice(-10).map(d => d ? d.getDate() : 'null'),
+    });
 
     return days;
   }, []);
@@ -541,10 +561,23 @@ export default function JobDetailsScreen() {
     setIsSubmittingBid(true);
 
     try {
+      // Format dates in local timezone to avoid timezone shift issues
+      const formattedDates = selectedDates.map((date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      });
+
+      console.log('📅 Submitting bid with dates:', {
+        selectedDates,
+        formattedDates,
+      });
+
       await bidMutation.mutateAsync({
         id: Number(id),
         amount: Number(bidAmount),
-        dates: selectedDates.map((date) => date.toISOString().split("T")[0]),
+        dates: formattedDates,
         currencies: bidCurrency,
         amount_type: bidAmountType,
       });
@@ -715,6 +748,7 @@ export default function JobDetailsScreen() {
 
     try {
       setIsCheckingIn(true);
+      setShowLocationLoading(true);
 
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -723,6 +757,7 @@ export default function JobDetailsScreen() {
           "Location permission is needed to check in."
         );
         setIsCheckingIn(false);
+        setShowLocationLoading(false);
         return;
       }
 
@@ -756,8 +791,10 @@ export default function JobDetailsScreen() {
         longitude: position.coords.longitude,
       });
       setIsLocationFetched(true);
+      setShowLocationLoading(false);
       setShowCheckInModal(true);
     } catch (e: any) {
+      setShowLocationLoading(false);
       Alert.alert("Location Error", e?.message || "Unable to fetch location.");
     } finally {
       setIsCheckingIn(false);
@@ -2525,6 +2562,23 @@ export default function JobDetailsScreen() {
           </View>
         </Modal>
       )}
+
+      {/* Location Loading Overlay */}
+      <Modal
+        visible={showLocationLoading}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.locationLoadingOverlay}>
+          <View style={styles.locationLoadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={styles.locationLoadingTitle}>Fetching Your Location</Text>
+            <Text style={styles.locationLoadingSubtitle}>
+              Make sure you are nearest to the inspection location for approval
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -3386,7 +3440,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dayHeader: {
-    flex: 1,
+    width: "14.2%",
     textAlign: "center",
     fontSize: 14,
     fontWeight: "600",
@@ -3398,12 +3452,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   calendarDay: {
-    width: "14.28%",
+    width: "14.2%",
     aspectRatio: 1,
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 8,
-    margin: 1,
   },
   calendarDaySelected: {
     backgroundColor: "#3B82F6",
@@ -3715,5 +3768,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#FFFFFF",
+  },
+  locationLoadingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  locationLoadingContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 32,
+    alignItems: "center",
+    maxWidth: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  locationLoadingTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 20,
+    color: "#1F2937",
+    marginTop: 20,
+    textAlign: "center",
+  },
+  locationLoadingSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    color: "#6B7280",
+    marginTop: 12,
+    textAlign: "center",
+    lineHeight: 22,
   },
 });
