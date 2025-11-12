@@ -301,7 +301,9 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+
+        
+        <Pressable style={styles.backButton} onPress={() => router.replace('/role-selection')}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <View style={styles.headerRight} />
@@ -406,8 +408,8 @@ export default function LoginScreen() {
                     </Text>
                     <OTPInput
                       length={5}
-                      onComplete={(enteredOtp) => setOtp(enteredOtp)}
-                      onChange={(value) => setOtp(value)}
+                      onComplete={(enteredOtp: string) => setOtp(enteredOtp)}
+                      onChange={(value: string) => setOtp(value)}
                     />
                     
                     <Pressable 
@@ -631,7 +633,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '700',
     color: '#111827',
     marginBottom: 8,
@@ -639,8 +641,7 @@ fontFamily: 'Montserrat',
   },
   subtitle: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#6B7280',
     lineHeight: 22,
     fontWeight: '400',
@@ -685,8 +686,7 @@ fontFamily: 'Montserrat',
   },
   toggleOptionText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -701,7 +701,7 @@ fontFamily: 'Montserrat',
   },
   inputLabel: {
     fontSize: 14,
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
@@ -727,8 +727,7 @@ fontFamily: 'Montserrat',
   input: {
     flex: 1,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#111827',
     fontWeight: '400',
     padding: 0,
@@ -762,8 +761,7 @@ fontFamily: 'Montserrat',
   phoneInput: {
     flex: 1,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#111827',
     fontWeight: '400',
     padding: 0,
@@ -832,8 +830,7 @@ fontFamily: 'Montserrat',
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -930,8 +927,7 @@ fontFamily: 'Montserrat',
   modalInput: {
     flex: 1,
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#111827',
     fontWeight: '400',
     padding: 0,
@@ -961,8 +957,7 @@ fontFamily: 'Montserrat',
   modalSubmitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -972,8 +967,7 @@ fontFamily: 'Montserrat',
   },
   modalCancelButtonText: {
     fontSize: 16,
-fontFamily: 'Montserrat',
-fontFamily: 'Montserrat',
+    fontFamily: 'Montserrat',
     color: '#6B7280',
     fontWeight: '600',
   },

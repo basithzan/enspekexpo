@@ -92,9 +92,35 @@ export default function EditCoursesScreen() {
           },
         ]);
 
-        await apiClient.post('/update-inspector-data', {
+        // Refresh user data
+        const refreshResponse = await apiClient.post('/update-inspector-data', {
           token: user?.auth_token,
         });
+
+        // Update AsyncStorage with new courses data
+        if (refreshResponse.data.success) {
+          try {
+            const userData = await AsyncStorage.getItem('user_data');
+            if (userData) {
+              const parsedUser = JSON.parse(userData);
+              // Update the inspector_details with new courses data
+              if (parsedUser.inspector_details) {
+                parsedUser.inspector_details.courses = formattedData;
+              } else if (parsedUser.details) {
+                // Fallback to details if inspector_details doesn't exist
+                if (!parsedUser.details.inspector_details) {
+                  parsedUser.details.inspector_details = {};
+                }
+                parsedUser.details.inspector_details.courses = formattedData;
+              }
+              
+              // Save updated user data back to AsyncStorage
+              await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
+            }
+          } catch (storageError) {
+            console.error('Failed to update AsyncStorage:', storageError);
+          }
+        }
       } else {
         Alert.alert('Error', response.data.message || 'Failed to update courses');
       }

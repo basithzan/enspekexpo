@@ -293,6 +293,65 @@ export default function EditInspectorProfileScreen() {
         });
 
         if (refreshResponse.data.success) {
+          // Update the full user data in AsyncStorage
+          try {
+            const userData = await AsyncStorage.getItem('user_data');
+            if (userData) {
+              const parsedUser = JSON.parse(userData);
+              
+              // Update basic user fields
+              parsedUser.name = formData.name;
+              parsedUser.phone = formData.phone;
+              
+              // Update inspector details
+              if (parsedUser.inspector_details) {
+                parsedUser.inspector_details.name = formData.name;
+                parsedUser.inspector_details.phone = formData.phone;
+                parsedUser.inspector_details.bio = formData.bio;
+                parsedUser.inspector_details.location = formData.location;
+                parsedUser.inspector_details.nationality = formData.nationality;
+                parsedUser.inspector_details.dob = formData.dob;
+                parsedUser.inspector_details.cost = formData.cost;
+                parsedUser.inspector_details.cost_type = formData.cost_type;
+                if (selectedCountry) {
+                  parsedUser.inspector_details.country = {
+                    id: selectedCountry.id,
+                    name: selectedCountry.name,
+                    country_code: selectedCountry.code,
+                    phone_code: selectedCountry.phone_code
+                  };
+                }
+              } else if (parsedUser.details) {
+                // Fallback to details if inspector_details doesn't exist
+                if (!parsedUser.details.inspector_details) {
+                  parsedUser.details.inspector_details = {};
+                }
+                parsedUser.details.inspector_details.name = formData.name;
+                parsedUser.details.inspector_details.phone = formData.phone;
+                parsedUser.details.inspector_details.bio = formData.bio;
+                parsedUser.details.inspector_details.location = formData.location;
+                parsedUser.details.inspector_details.nationality = formData.nationality;
+                parsedUser.details.inspector_details.dob = formData.dob;
+                parsedUser.details.inspector_details.cost = formData.cost;
+                parsedUser.details.inspector_details.cost_type = formData.cost_type;
+                if (selectedCountry) {
+                  parsedUser.details.inspector_details.country = {
+                    id: selectedCountry.id,
+                    name: selectedCountry.name,
+                    country_code: selectedCountry.code,
+                    phone_code: selectedCountry.phone_code
+                  };
+                }
+              }
+              
+              // Save updated user data back to AsyncStorage
+              await AsyncStorage.setItem('user_data', JSON.stringify(parsedUser));
+            }
+          } catch (storageError) {
+            console.error('Failed to update AsyncStorage:', storageError);
+          }
+          
+          // Update user context
           const updatedUserData = {
             ...user,
             name: formData.name,
