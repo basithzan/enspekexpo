@@ -100,6 +100,19 @@ const HomeInspector = () => {
     }
   }
 
+  const inspectorLocation = inspector?.user?.inspector_details?.location
+    || inspector?.user?.details?.inspector_details?.location
+    || inspector?.user?.details?.location;
+
+  const inspectorCountry = inspector?.user?.inspector_details?.country?.name
+    || inspector?.user?.details?.inspector_details?.country?.name
+    || inspector?.user?.country?.name
+    || inspector?.user?.details?.country?.name;
+
+  const headerLocation = [inspectorLocation, inspectorCountry]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <>
       {/* <button type="button" onClick={__openCamera} className="camera-button">Open Camera</button> */}
@@ -123,7 +136,7 @@ const HomeInspector = () => {
         <div className="pb-16">
           <HomeHeader
             show_notification={false}
-            location={inspector?.user?.country?.name}
+            location={headerLocation || inspector?.user?.country?.name}
             username={inspector?.user?.name}
           />
           {/* <SearchBar placeholder={"Search jobs..."} /> */}

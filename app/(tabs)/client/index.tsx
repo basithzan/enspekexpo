@@ -8,6 +8,13 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { HapticPressable } from '../../../src/components/HapticPressable';
 import { HapticType } from '../../../src/utils/haptics';
 
+const getCountryName = (countryData: any): string | undefined => {
+  if (!countryData) return undefined;
+  if (typeof countryData === 'string') return countryData;
+  if (Array.isArray(countryData)) return countryData[0];
+  return countryData.name || countryData.country || countryData.country_name || countryData.label;
+};
+
 
 export default function ClientHome(){
   const router = useRouter();
@@ -24,6 +31,21 @@ export default function ClientHome(){
   if (user?.type !== 'client') {
     return <Redirect href="/role-selection" />;
   }
+
+  const clientDetails = (user as any)?.client_details || (user as any)?.details?.client_details;
+  const clientLocation =
+    clientDetails?.city ||
+    clientDetails?.location ||
+    (user as any)?.city ||
+    (user as any)?.location;
+
+  const clientCountry =
+    getCountryName(clientDetails?.country) ||
+    clientDetails?.country_name ||
+    getCountryName((user as any)?.country) ||
+    (user as any)?.country_name;
+
+  const headerLocation = [clientLocation, clientCountry].filter(Boolean).join(', ') || 'Location';
 
   const onCreateRFI = useCallback((prefillKey?: string)=>{
     router.push({ pathname: '/(tabs)/client/create-rfi', params: prefillKey ? { type: prefillKey } : {} as any });
@@ -48,10 +70,8 @@ export default function ClientHome(){
             <View style={styles.locationIcon}>
               <Text style={styles.locationIconText}>📍</Text>
             </View>
-            {console.log(user)
-            }
             <Text style={styles.locationText}>
-              {user?.client_details?.country?.name || user?.country?.name || 'Location'}
+              {headerLocation}
             </Text>
           </View>
           <Text style={styles.subtitle}>Welcome back, {user?.name || 'Client'}</Text>

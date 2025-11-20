@@ -11,6 +11,13 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { HapticPressable } from '../../../src/components/HapticPressable';
 import { HapticType } from '../../../src/utils/haptics';
 
+const getCountryName = (countryData: any): string | undefined => {
+  if (!countryData) return undefined;
+  if (typeof countryData === 'string') return countryData;
+  if (Array.isArray(countryData)) return countryData[0];
+  return countryData.name || countryData.country || countryData.country_name || countryData.label;
+};
+
 export default function InspectorHome(){
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
@@ -285,6 +292,21 @@ export default function InspectorHome(){
   
   console.log('✅ Auth check passed - User is inspector');
 
+  const inspectorDetails = (user as any)?.inspector_details || (user as any)?.details?.inspector_details;
+  const inspectorLocation =
+    inspectorDetails?.location ||
+    inspectorDetails?.city ||
+    (user as any)?.city ||
+    (user as any)?.location;
+
+  const inspectorCountry =
+    getCountryName(inspectorDetails?.country) ||
+    inspectorDetails?.country_name ||
+    getCountryName((user as any)?.country) ||
+    (user as any)?.country_name;
+
+  const headerLocation = [inspectorLocation, inspectorCountry].filter(Boolean).join(', ') || 'Location';
+
 
   const openJob = useCallback((id: string|number)=>{
     console.log('🔍 Navigation Debug - Opening job:', { id, type: typeof id });
@@ -312,7 +334,7 @@ export default function InspectorHome(){
             <View style={styles.locationIcon}>
               <Text style={styles.locationIconText}>📍</Text>
             </View>
-            <Text style={styles.locationText}>Mumbai, India</Text>
+            <Text style={styles.locationText}>{headerLocation}</Text>
           </View>
           <Text style={styles.subtitle}>Welcome back, {user?.name || 'Inspector'}</Text>
         </View>
@@ -383,7 +405,11 @@ export default function InspectorHome(){
 
         {/* My Recent Bids */}
         <View style={styles.jobsSection}>
-          <SectionHeader title='My Recent Bids' actionLabel='View All' onAction={()=>router.push('/(tabs)/inspector/bids')} />
+          <SectionHeader
+            title='My Recent Bids'
+            actionLabel='View All'
+            onAction={()=>router.push('/(tabs)/bids')}
+          />
           {bidsLoading ? <SkeletonList /> : (
             bids?.length ? (
               <FlashList

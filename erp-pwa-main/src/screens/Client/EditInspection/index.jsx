@@ -225,29 +225,34 @@ const EditInspection = () => {
       });
       console.log(formattedDates);
 
-      const extractedData = {
-        enquiry_id: params.id,
-        country: data.country.value,
-        commodity:
-          data.commodity.value === "Other"
-            ? data.commodity_other
-            : data.commodity.value,
-
-        scope:
-          data.scope.value === "Other" ? data.scope_other : data.scope.value,
-        category: data.category.value === "Other" ? data.category_other : data.category.value,
-        supplier_location: data.supplier_location,
-        supplier_name: data.supplier_name,
-        additional_note: data.additional_note,
-        dates: formattedDates,
-        job_name: data.job_name,
-      };
-
-      console.log(extractedData);
+      const formData = new FormData();
+      formData.append("id", params.id);
+      formData.append("job_name", data.job_name);
+      formData.append("supplier_name", data.supplier_name);
+      formData.append("supplier_location", data.supplier_location);
+      formData.append(
+        "category",
+        data.category.value === "Other" ? data.category_other : data.category.value
+      );
+      formData.append(
+        "scope",
+        data.scope.value === "Other" ? data.scope_other : data.scope.value
+      );
+      formData.append(
+        "commodity",
+        data.commodity.value === "Other"
+          ? data.commodity_other
+          : data.commodity.value
+      );
+      formData.append("country", String(data.country.value));
+      formData.append("dates", formattedDates.join(","));
+      if (data.additional_note) {
+        formData.append("additional_note", data.additional_note);
+      }
 
       dispatch(
         editInspection({
-          formData: extractedData,
+          formData,
           token: client?.user.auth_token,
         })
       );

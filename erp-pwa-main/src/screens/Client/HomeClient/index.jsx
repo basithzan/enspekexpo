@@ -18,6 +18,18 @@ const HomeClient = () => {
     dispatch(clearRequestSuccess())
     dispatch(getAllCountries(client?.user.auth_token))
   }, []);
+
+  const clientLocation = client?.user?.client_details?.city
+    || client?.user?.client_details?.location
+    || client?.user?.city;
+
+  const clientCountry = client?.user?.client_details?.country?.name
+    || client?.user?.country?.name;
+
+  const headerLocation = [clientLocation, clientCountry]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <>
       {client_loading ? (
@@ -26,7 +38,7 @@ const HomeClient = () => {
         <div className="pb-16">
           <HomeHeader
             show_notification
-            location={client?.user?.client_details?.country?.name }
+            location={headerLocation || client?.user?.client_details?.country?.name}
             username={client?.user?.name}
           />
 

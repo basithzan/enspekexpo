@@ -21,64 +21,40 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { HapticPressable } from '@/components/HapticPressable';
 import { HapticType } from '@/utils/haptics';
 
-interface InspectionReport {
-  id: number;
-  report_title: string;
-  created_at: string;
-  file_path: string;
-  file_name: string;
-}
-
-interface InspectionReport {
-  id: number;
-  report_title: string;
-  created_at: string;
-  file_path: string;
-  file_name: string;
-}
-
 export default function RfiDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
-  
-  // Add inspection reports state
-  const [inspectionReports, setInspectionReports] = useState<InspectionReport[]>([]);
-  const [loadingReports, setLoadingReports] = useState(false);
-  
+
   const { data: enquiryData, isLoading, refetch } = useViewEnquiry(id as string);
   const { data: invoicesData } = useEnquiryInvoices(id as string);
   const createPaymentIntentMutation = useCreatePaymentIntent();
   const confirmInspectorMutation = useConfirmInspectorSelection();
   
-  // Add function to fetch inspection reports
-  const fetchInspectionReports = async () => {
-    if (!id) return;
-    
-    setLoadingReports(true);
+  const [isRefreshingReports, setIsRefreshingReports] = useState(false);
+
+  const inspectionReports = useMemo(() => {
+    const reports =
+      singleJob?.flash_reports ||
+      singleJob?.enquiry?.flash_reports ||
+      singleJob?.enquiry?.master_logs?.[0]?.flash_reports ||
+      singleJob?.enquiry?.master_logs?.[0]?.inspection_reports ||
+      [];
+
+    return Array.isArray(reports) ? reports : [];
+  }, [singleJob]);
+
+  const refreshInspectionReports = async () => {
+    if (isRefreshingReports) return;
+    setIsRefreshingReports(true);
     try {
-      const { apiClient } = await import('../../../src/api/client');
-      const response = await apiClient.post('/get-confirmed-reports', {
-        enquiry_log_id: Number(id)
-      });
-      
-      if (response.data.success && response.data.data) {
-        setInspectionReports(response.data.data);
-      } else {
-        setInspectionReports([]);
-      }
+      await refetch();
     } catch (error) {
-      console.error('Error fetching inspection reports:', error);
-      setInspectionReports([]);
+      console.error('Error refreshing inspection reports:', error);
     } finally {
-      setLoadingReports(false);
+      setIsRefreshingReports(false);
     }
   };
-  
-  // Fetch inspection reports when component mounts or id changes
-  useEffect(() => {
-    fetchInspectionReports();
-  }, [id]);
   
   const singleJob = enquiryData?.data || enquiryData;
   const checkIns = singleJob?.checkIns || [];
@@ -645,12 +621,12 @@ export default function RfiDetails() {
           <View style={styles.sectionHeader}>
             <Text style={styles.cardTitle}>Inspection Reports</Text>
             <HapticPressable 
-              onPress={fetchInspectionReports} 
+              onPress={refreshInspectionReports} 
               style={styles.refreshButton} 
               hapticType={HapticType.Light}
-              disabled={loadingReports}
+              disabled={isRefreshingReports}
             >
-              {loadingReports ? (
+              {isRefreshingReports ? (
                 <ActivityIndicator size="small" color="#3B82F6" />
               ) : (
                 <Ionicons name="refresh" size={20} color="#3B82F6" />
@@ -658,7 +634,7 @@ export default function RfiDetails() {
             </HapticPressable>
           </View>
           
-          {loadingReports ? (
+          {isRefreshingReports && inspectionReports.length === 0 ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color="#3B82F6" />
               <Text style={styles.loadingText}>Loading reports...</Text>

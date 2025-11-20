@@ -3,6 +3,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { apiClient } from '../api/client';
 
+type CountryInfo = {
+  id?: number;
+  name?: string;
+  country_code?: string;
+  phone_code?: string;
+  [key: string]: any;
+};
+
+interface ProfileDetails {
+  location?: string;
+  city?: string;
+  country?: CountryInfo | string;
+  country_name?: string;
+  [key: string]: any;
+}
+
 interface User {
   id: number;
   name: string;
@@ -12,7 +28,18 @@ interface User {
   company_name?: string;
   phone?: string;
   country_id?: number;
-  country?: string;
+  country?: CountryInfo | string;
+  country_name?: string;
+  city?: string;
+  location?: string;
+  client_details?: ProfileDetails;
+  inspector_details?: ProfileDetails;
+  details?: {
+    client_details?: ProfileDetails;
+    inspector_details?: ProfileDetails;
+    [key: string]: any;
+  };
+  [key: string]: any;
 }
 
 interface AuthContextType {
@@ -109,16 +136,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           phone: userData.phone,
           country_id: userData.country_id,
           country: userData.country,
+          country_name: userData.country_name,
+          city: userData.city,
+          location: userData.location,
           // Store full nested details for clients/inspectors
-          client_details: userType === 'client' ? userData.client_details : undefined,
-          inspector_details: userType === 'inspector' ? userData.inspector_details : undefined,
+          client_details: userData.client_details,
+          inspector_details: userData.inspector_details,
+          details: userData.details,
         };
         
         await AsyncStorage.setItem('user_data', JSON.stringify(userDataToStore));
         console.log('✅ Stored to AsyncStorage - user_data with type:', userType);
         console.log('✅ Stored data:', JSON.stringify(userDataToStore, null, 2));
 
-        const newUser = {
+        const newUser: User = {
           id: userData.id,
           name: userData.name,
           email: userData.email,
@@ -127,7 +158,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           company_name: userData.company_name,
           phone: userData.phone,
           country_id: userData.country_id,
-          country : userData.country,
+          country: userData.country,
+          country_name: userData.country_name,
+          city: userData.city,
+          location: userData.location,
+          client_details: userData.client_details,
+          inspector_details: userData.inspector_details,
+          details: userData.details,
         };
         
         console.log('✅ Setting user state with type:', userType);

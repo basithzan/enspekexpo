@@ -12,7 +12,7 @@ const RecentBidsContainer = () => {
     <div className="mx-5 py-4">
       {my_bids && my_bids?.my_bids && (
         <>
-          <BlockHeading title={"My Recent Bids"} />
+          <BlockHeading title={"My Recent Bids"} route={"/my-bids"} />
           {my_bids?.my_bids?.slice(0, 5)?.map((item, indexQ) => (
             <Link to={"/bid-now/" + item.id}>
               <div className="grid gap-4 mt-2">
