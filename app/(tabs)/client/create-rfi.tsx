@@ -373,19 +373,34 @@ export default function CreateRfi() {
 
     if (isEditMode) {
       // Edit mode - use FormData for edit endpoint
-      const formData = new FormData();
-      formData.append('id', params.id as string);
-      formData.append('job_name', jobName);
-      formData.append('supplier_name', supplierName);
-      formData.append('supplier_location', supplierLocation);
-      formData.append('category', category?.value === 'Other' ? categoryOther : category?.value || '');
-      formData.append('scope', scope?.value === 'Other' ? scopeOther : scope?.value || '');
-      formData.append('commodity', commodity?.value === 'Other' ? commodityOther : commodity?.value || '');
-      formData.append('country', String(country?.value || ''));
-      formData.append('dates', formattedDates.join(','));
-      if (additionalNote) {
-        formData.append('additional_note', additionalNote);
-      }
+      // const formData = new FormData();
+      // formData.append('id', params.id as string);
+      // formData.append('enquiry_id', params.id as string);
+      // formData.append('job_name', jobName);
+      // formData.append('supplier_name', supplierName);
+      // formData.append('supplier_location', supplierLocation);
+      // formData.append('category', category?.value === 'Other' ? categoryOther : category?.value || '');
+      // formData.append('scope', scope?.value === 'Other' ? scopeOther : scope?.value || '');
+      // formData.append('commodity', commodity?.value === 'Other' ? commodityOther : commodity?.value || '');
+      // formData.append('country', String(country?.value || ''));
+      // formData.append('dates', formattedDates.join(','));
+      // if (additionalNote) {
+      //   formData.append('additional_note', additionalNote);
+      // }
+
+      const formData = {
+        job_name: jobName,
+        supplier_name: supplierName,
+        enquiry_id : params.id,
+        supplier_location: supplierLocation,
+        category: category?.value === 'Other' ? categoryOther : category?.value,
+        scope: scope?.value === 'Other' ? scopeOther : scope?.value,
+        commodity: commodity?.value === 'Other' ? commodityOther : commodity?.value,
+        country: Number(country?.value),
+        dates: formattedDates,
+        additional_note: additionalNote || undefined,
+      };
+
 
       try {
         await editMutation.mutateAsync(formData);

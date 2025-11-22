@@ -83,18 +83,63 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (user) {
-      // Initialize with basic user data from AuthContext
-      setFormData(prev => ({
-        ...prev,
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        company_name: user.company_name || '',
-        country_id: user.country_id || 0,
-      }));
+      console.log('🔍 Edit Profile - User data:', JSON.stringify(user, null, 2));
+      console.log('🔍 User type:', user.type);
+      console.log('🔍 User.client_details exists?', !!user.client_details);
       
-      // Fetch full profile data from API
-      fetchUserProfile();
+      // For clients, use client_details from the stored user data
+      if (user.type === 'client') {
+        // Try multiple possible data sources
+        const details = user.client_details || user.details?.client_details || user;
+        console.log('📋 Client details source:', JSON.stringify(details, null, 2));
+        
+        const formattedData = {
+          name: details.name || user.name || '',
+          email: details.email || user.email || '',
+          phone: details.phone || details.mobile || user.phone || user.mobile || '',
+          company_name: details.company_name || user.company_name || '',
+          company_size: details.company_size || user.company_size || '',
+          city: details.city || user.city || '',
+          industry: details.industry || user.industry || '',
+          bio: details.bio || user.bio || '',
+          country_id: details.country_id || (typeof details.country === 'object' ? details.country?.id : 0) || user.country_id || (typeof user.country === 'object' ? user.country?.id : 0) || 0,
+        };
+        
+        console.log('📝 Setting form data:', formattedData);
+        console.log('📝 Name value:', formattedData.name);
+        
+        setFormData(prev => ({
+          ...prev,
+          ...formattedData,
+        }));
+        
+        console.log('✅ Form data set for client');
+        
+        // Set avatar if available
+        const avatarUrl = details.avatar || details.profile || user.avatar || user.profile;
+        if (avatarUrl) {
+          const fullAvatarUrl = avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`;
+          setAvatar(fullAvatarUrl);
+          console.log('📸 Avatar set:', fullAvatarUrl);
+        }
+      } else {
+        console.log('⚙️ Setting basic user data for inspector');
+        // Initialize with basic user data from AuthContext
+        setFormData(prev => ({
+          ...prev,
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          company_name: user.company_name || '',
+          country_id: user.country_id || 0,
+        }));
+        
+        // For inspectors, fetch full profile data from API
+        if (user.type === 'inspector') {
+          console.log('🔄 Fetching inspector profile from API');
+          fetchUserProfile();
+        }
+      }
     }
     loadCountries();
   }, [user]);
@@ -103,12 +148,34 @@ export default function EditProfileScreen() {
   useEffect(() => {
     if ((user?.country_id || formData.country_id) && countries.length > 0) {
       const idToMatch = Number(formData.country_id || user?.country_id);
+      console.log('🌍 Looking for country with ID:', idToMatch);
+      
       const currentCountry = countries.find(
         (country: Country) => Number(country.id) === idToMatch
       );
-      if (currentCountry) setSelectedCountry(currentCountry);
+      if (currentCountry) {
+        console.log('✅ Found country:', currentCountry.name);
+        setSelectedCountry(currentCountry);
+      }
     }
-  }, [user?.country_id, formData.country_id, countries]);
+    
+    // Also try to set from user.client_details.country or user.country if available
+    if (user?.type === 'client' && countries.length > 0) {
+      const clientCountry = user.client_details?.country || user.country;
+      if (clientCountry && typeof clientCountry === 'object' && clientCountry.id) {
+        const countryId = Number(clientCountry.id);
+        console.log('🌍 Found country from client_details:', clientCountry.name, 'ID:', countryId);
+        
+        const currentCountry = countries.find(
+          (country: Country) => Number(country.id) === countryId
+        );
+        if (currentCountry && (!selectedCountry || Number(selectedCountry.id) !== countryId)) {
+          console.log('✅ Setting country from client_details:', currentCountry.name);
+          setSelectedCountry(currentCountry);
+        }
+      }
+    }
+  }, [user?.country_id, formData.country_id, countries, user?.client_details, user?.country]);
 
   // Also re-select country whenever profile fetch updates formData.country_id
   useEffect(() => {
@@ -142,49 +209,7 @@ export default function EditProfileScreen() {
     try {
       setIsLoadingProfile(true);
       
-      if (user?.type === 'client') {
-        // For clients, the profile data should already be in AsyncStorage from login
-        // Just re-read it from AsyncStorage to ensure we have the latest data
-        const userData = await AsyncStorage.getItem('user_data');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          console.log('Client user data from storage:', parsedUser);
-          
-          // If we have client_details in stored data, use it
-          if (parsedUser.client_details) {
-            const details = parsedUser.client_details;
-            
-            setFormData(prev => ({
-              ...prev,
-              name: details.name || parsedUser.name || prev.name,
-              email: details.email || parsedUser.email || prev.email,
-              phone: details.phone || parsedUser.phone || details.mobile || prev.phone,
-              company_name: details.company_name || parsedUser.company_name || prev.company_name,
-              company_size: details.company_size || prev.company_size,
-              city: details.city || prev.city,
-              industry: details.industry || prev.industry,
-              bio: details.bio || prev.bio,
-              country_id: details.country_id || parsedUser.country_id || details.country?.id || parsedUser.country?.id || prev.country_id,
-            }));
-            
-            // Set avatar if available
-            if (details.avatar || details.profile) {
-              const avatarUrl = details.avatar || details.profile;
-              setAvatar(avatarUrl.startsWith('http') ? avatarUrl : `${API_BASE_URL}/${avatarUrl}`);
-            }
-            
-            // Set country if available
-            const countryData = details.country || parsedUser.country;
-            if (countryData && countryData.id) {
-              setSelectedCountry({
-                id: Number(countryData.id),
-                name: String(countryData.name || ''),
-                code: countryData.country_code,
-              });
-            }
-          }
-        }
-      } else if (user?.type === 'inspector') {
+      if (user?.type === 'inspector') {
         // For inspectors, try multiple endpoints
         const endpoints = [
           '/get-inspector-profile',
@@ -251,7 +276,7 @@ export default function EditProfileScreen() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch user profile:', error);
+      console.error('Failed to fetch inspector profile:', error);
     } finally {
       setIsLoadingProfile(false);
     }
@@ -457,14 +482,35 @@ export default function EditProfileScreen() {
 
         const response = await apiClient.post('/edit-client-data', formDataObj);
 
+        console.log('📤 Update response:', JSON.stringify(response.data, null, 2));
+
         if (response.data.success) {
-          // Update user context with new data
+          // Update user context with new data including client_details
+          const updatedClientDetails = {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            company_name: formData.company_name,
+            company_size: formData.company_size,
+            city: formData.city,
+            industry: formData.industry,
+            bio: formData.bio,
+            country_id: formData.country_id,
+            avatar: avatar,
+          };
+          
           await updateUser({
             name: formData.name,
             phone: formData.phone,
             company_name: formData.company_name,
             country_id: formData.country_id,
+            client_details: {
+              ...user?.client_details,
+              ...updatedClientDetails,
+            },
           });
+
+          console.log('✅ User context updated successfully');
 
           Alert.alert('Success', 'Profile updated successfully', [
             {

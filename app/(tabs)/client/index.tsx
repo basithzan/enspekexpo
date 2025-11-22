@@ -32,12 +32,14 @@ export default function ClientHome(){
     return <Redirect href="/role-selection" />;
   }
 
+  
   const clientDetails = (user as any)?.client_details || (user as any)?.details?.client_details;
   const clientLocation =
     clientDetails?.city ||
     clientDetails?.location ||
     (user as any)?.city ||
     (user as any)?.location;
+  console.log(clientDetails,';;');
 
   const clientCountry =
     getCountryName(clientDetails?.country) ||

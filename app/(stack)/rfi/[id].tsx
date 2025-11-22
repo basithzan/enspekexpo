@@ -347,7 +347,7 @@ export default function RfiDetails() {
                 <Text style={styles.inspectorName}>
                   {singleJob.accepted_bid.inspector.name || 'N/A'}
                 </Text>
-                {singleJob.accepted_bid.inspector.email && (
+                {/* {singleJob.accepted_bid.inspector.email && (
                   <Text style={styles.inspectorEmail}>
                     {singleJob.accepted_bid.inspector.email}
                   </Text>
@@ -356,7 +356,7 @@ export default function RfiDetails() {
                   <Text style={styles.inspectorPhone}>
                     {singleJob.accepted_bid.inspector.phone}
                   </Text>
-                )}
+                )} */}
                 {(singleJob.accepted_bid.inspector.country?.name || 
                   singleJob.accepted_bid.inspector.country_name || 
                   singleJob.accepted_bid.inspector.country) && (
@@ -1641,6 +1641,7 @@ fontFamily: 'Montserrat',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginTop: 12,
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 10,
     paddingVertical: 8,

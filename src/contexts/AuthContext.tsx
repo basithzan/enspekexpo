@@ -126,19 +126,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Store authentication data with full nested details
         await AsyncStorage.setItem('auth_token', userData.auth_token);
+        
+        // For clients, extract name and other details from client_details if available
+        const clientDetails = userData.client_details || {};
+        const inspectorDetails = userData.inspector_details || {};
+        
         const userDataToStore = {
           id: userData.id,
-          name: userData.name,
-          email: userData.email,
+          // Try to get name from multiple sources
+          name: userData.name || clientDetails.name || inspectorDetails.name || '',
+          email: userData.email || clientDetails.email || inspectorDetails.email || '',
           type: userType,
           auth_token: userData.auth_token,
-          company_name: userData.company_name,
-          phone: userData.phone,
-          country_id: userData.country_id,
-          country: userData.country,
-          country_name: userData.country_name,
-          city: userData.city,
-          location: userData.location,
+          company_name: userData.company_name || clientDetails.company_name || '',
+          phone: userData.phone || clientDetails.phone || clientDetails.mobile || inspectorDetails.phone || '',
+          country_id: userData.country_id || clientDetails.country_id || inspectorDetails.country_id || clientDetails.country?.id || 0,
+          country: userData.country || clientDetails.country || inspectorDetails.country,
+          country_name: userData.country_name || clientDetails.country?.name || inspectorDetails.country?.name || '',
+          city: userData.city || clientDetails.city || inspectorDetails.city || '',
+          location: userData.location || inspectorDetails.location || '',
           // Store full nested details for clients/inspectors
           client_details: userData.client_details,
           inspector_details: userData.inspector_details,
@@ -151,17 +157,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const newUser: User = {
           id: userData.id,
-          name: userData.name,
-          email: userData.email,
+          // Use the extracted name from userDataToStore
+          name: userDataToStore.name,
+          email: userDataToStore.email,
           type: userType,
           auth_token: userData.auth_token,
-          company_name: userData.company_name,
-          phone: userData.phone,
-          country_id: userData.country_id,
-          country: userData.country,
-          country_name: userData.country_name,
-          city: userData.city,
-          location: userData.location,
+          company_name: userDataToStore.company_name,
+          phone: userDataToStore.phone,
+          country_id: userDataToStore.country_id,
+          country: userDataToStore.country,
+          country_name: userDataToStore.country_name,
+          city: userDataToStore.city,
+          location: userDataToStore.location,
           client_details: userData.client_details,
           inspector_details: userData.inspector_details,
           details: userData.details,

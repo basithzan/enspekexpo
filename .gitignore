@@ -4,6 +4,6 @@
 
 expo-env.d.ts
 # @end expo-clierp-pwa-main/
-node_modules/
+node_modules
 
 .DS_Store
